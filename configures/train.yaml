@@ -1,0 +1,10 @@
+train_settings:
+  lr: !!float 0.001
+  optimizer: Adam
+  dataset: ImageNet
+  model: ResNet
+  epochs: !!int 32
+
+
+test_settings:
+  inference: TRUE
