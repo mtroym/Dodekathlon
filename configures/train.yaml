@@ -1,10 +1,10 @@
 train_settings:
   lr: !!float 0.001
   optimizer: Adam
-  dataset: ImageNet
-  model: ResNet
+  dataset: Base
+  model: Base
   epochs: !!int 32
-
+  isTrain: TRUE
 
 test_settings:
   inference: TRUE

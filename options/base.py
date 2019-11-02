@@ -25,17 +25,18 @@ class BaseOptions:
         self.parser.add_argument('--norm', type=str, default='instance', help='instance normalization or batch normalization')
         self.parser.add_argument('--serial_batches', action='store_true', help='if true, takes images in order to make batches, otherwise takes them randomly')
         self.parser.add_argument('--display_winsize', type=int, default=256, help='display window size')
-        self.parser.add_argument('--display_id', type=int, default=1, help='window id of the web display')
+        self.parser.add_argument('--display_id', type=int, default=0, help='window id of the web display')
         self.parser.add_argument('--display_port', type=int, default=8097, help='visdom port of the web display')
         self.parser.add_argument('--no_dropout', action='store_true', help='no dropout for the generator')
         self.parser.add_argument('--max_dataset_size', type=int, default=float("inf"),
-                                 help='Maximum number of samples allowed per dataset. If the dataset directory contains more than max_dataset_size, only a subset is loaded.')
+                                 help='Maximum number of samples allowed per datasets. If the datasets directory contains more than max_dataset_size, only a subset is loaded.')
         self.parser.add_argument('--resize_or_crop', type=str, default='resize_and_crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')
         self.parser.add_argument('--no_flip', action='store_true', help='if specified, do not flip the images for data augmentation')
         self.parser.add_argument('--init_type', type=str, default='normal', help='network initialization [normal|xavier|kaiming|orthogonal]')
         self.parser.add_argument('--padding_type', type=str, default='reflect', help='# of input image channels')
         self.parser.add_argument('--configure_file', type=str, default='configures/train.yaml', help='configure files.')
         self.parser.add_argument('--suffix', type=str, default='default', help='configure files.')
+        self.parser.add_argument('--no_html', type=bool, default=False, help='configure files.')
         self.opt = self.parser.parse_args()
         # down-sampling times
         self.initialized = True
@@ -57,6 +58,7 @@ class BaseOptions:
         time_str = time.strftime("Trail#%j%H%M%S", time.localtime(time.time()))
         exp_name = '-'.join([self.opt.model, self.opt.dataset, str(self.opt.lr), self.opt.optimizer, self.opt.suffix, time_str])
         expr_dir = os.path.join(self.opt.checkpoints_dir, self.opt.name, exp_name)
+        self.opt.__setattr__('expr_dir', expr_dir)
         util.make_dirs(expr_dir)
         file_name = os.path.join(expr_dir, 'opt.txt')
         print('=> make opt file in :\n\t{}'.format(os.path.abspath(file_name)))
