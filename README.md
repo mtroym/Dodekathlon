@@ -1,2 +1,49 @@
-# pytorch-train
-pytorch-1.3.0 training-dev
+# `Dodekathlon`
+## Updates: 
+- 2019-Nov-12 Name of my projects will be changed to the Myths from Ancient Greek.
+
+## Reference of Titan `Dodekathlon`
+Before I chose this name "Dodekathlon", I supposed to use Hercules, who was considered as
+a demi-god with strong labors. "Dodekathlon", considered as 12 Labors of Hercules, are 
+how Hercules gained much of his mythological fame as a demi-god, listing as follows:
+
+- Slay the Nemean Lion.
+- Slay the nine-headed Lernaean Hydra.
+- Capture the Golden Hind of Artemis.
+- Capture the Erymanthian Boar.
+- Clean the Augean stables in a single day.
+- Slay the Stymphalian Birds.
+- Capture the Cretan Bull.
+- Steal the Mares of Diomedes.
+- Obtain the girdle of Hippolyta, Queen of the Amazons.
+- Obtain the cattle of the monster Geryon.
+- Steal the apples of the Hesperides
+- Capture and bring back Cerberus.
+
+As PyTorch is from Torch, whose meaning is a sticker with flames and fires. 
+This project combines Training, Testing, Deploying, Visualization, Evaluation, Checkpoints
+and Resuming, etc., each of them is challenging and in great modularization. 
+Therefore, I chose `Dodekathlon`. 
+
+## Structure of `Dodekathlon`
+
+### Tree.
+```
+├── configures
+│   ├── train.yaml // The configures. (Trail Level)
+│   └── ....    // store the yaml configure.
+├── criterions  // define the criterions train and test.
+│   ├── loss    // define the loss.
+│   └── metrics // define the metrics for evaluation.
+├── datasets    // define the dataset. dataloader.
+├── main.py     // great dodekathlon main file.
+├── models      // define the model here.
+├── options     // define the options. DIFFS From configures.(Task level)
+├── requirements.txt // try 'pip install -U requirements.txt'
+├── tools       // some useful tools(object oriented).
+└── utils       // some useful functions.
+```
+
+
+
+
