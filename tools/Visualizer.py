@@ -26,7 +26,7 @@ class Visualizer:
             self.img_dir = os.path.join(self.web_dir, 'images')
             print('=> creating web directory:\n\t{}'.format(os.path.abspath(self.web_dir)))
             util.make_dirs([self.web_dir, self.img_dir])
-        self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
+        self.log_name = os.path.join(opt.expr_dir, 'loss_log.txt')
         with open(self.log_name, "a") as log_file:
             now = time.strftime("%c")
             log_file.write('================ Training Loss (%s) ================\n' % now)
@@ -50,6 +50,7 @@ class Visualizer:
                 nrows = int(np.ceil(len(visuals.items()) / ncols))
                 images = []
                 idx = 0
+                image_numpy = None
                 for label, image_numpy in visuals.items():
                     label_html_row += '<td>%s</td>' % label
                     images.append(image_numpy.transpose([2, 0, 1]))

@@ -1,5 +1,7 @@
 import os
 
+import cv2
+
 
 def make_dirs(paths):
     assert isinstance(paths, list) or isinstance(paths, str), 'The paths should be string or list of string'
@@ -13,3 +15,7 @@ def make_dirs(paths):
 def mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
+
+def save_image(array, path):
+    cv2.imwrite(path, array)

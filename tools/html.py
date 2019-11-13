@@ -12,12 +12,11 @@ class HTML:
             os.makedirs(self.web_dir)
         if not os.path.exists(self.img_dir):
             os.makedirs(self.img_dir)
-        # print(self.img_dir)
-
         self.doc = dominate.document(title=title)
         if reflesh > 0:
             with self.doc.head:
                 meta(http_equiv="reflesh", content=str(reflesh))
+        self.t = None
 
     def get_image_dir(self):
         return self.img_dir
@@ -34,10 +33,10 @@ class HTML:
         self.add_table()
         with self.t:
             with tr():
-                for im, txt, link in zip(ims, txts, links):
+                for im, txt, link_img in zip(ims, txts, links):
                     with td(style="word-wrap: break-word;", halign="center", valign="top"):
                         with p():
-                            with a(href=os.path.join('images', link)):
+                            with a(href=os.path.join('images', link_img)):
                                 img(style="width:%dpx" % width, src=os.path.join('images', im))
                             br()
                             p(txt)
@@ -50,15 +49,17 @@ class HTML:
 
 
 if __name__ == '__main__':
-    html = HTML('web/', 'test_html')
+    html = HTML('../checkpoints/web/', 'test_html', reflesh=20)
     html.add_header('hello world')
 
     ims = []
     txts = []
     links = []
-    for n in range(4):
-        ims.append('image_%d.png' % n)
+    for n in range(1):
+        ims.append('glow.png')
         txts.append('text_%d' % n)
         links.append('image_%d.png' % n)
+    html.add_images(ims, txts, links)
+    html.add_header("?")
     html.add_images(ims, txts, links)
     html.save()
