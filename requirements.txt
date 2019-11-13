@@ -1,3 +1,5 @@
+torchvision
+torch
 PyYaml
 visdom
 dominate

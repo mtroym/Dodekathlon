@@ -1,7 +1,7 @@
 train_settings:
   lr: !!float 0.001
   optimizer: Adam
-  dataset: Base
+  dataset: KP
   model: Base
   epochs: !!int 32
   isTrain: TRUE
