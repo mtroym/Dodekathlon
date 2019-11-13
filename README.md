@@ -3,7 +3,6 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/pytorch/pytorch?logo=pytorch)
 ![GitHub top language](https://img.shields.io/github/languages/top/mtroym/Dodekathlon)
 ![GitHub code size in byte![GitHub top language](https://img.shields.io/github/languages/top/mtroym/Dodekathlon)s](https://img.shields.io/github/languages/code-size/mtroym/dodekathlon?)
-![Gitlab pipeline status](https://img.shields.io/gitlab/pipeline/mtroym/dodekathlon?)
 ![Liberapay receiving](https://img.shields.io/liberapay/receives/troymao)
 ## Updates: 
 - 2019-11-12 Name of my projects will be changed to the Myths from Ancient Greek.
