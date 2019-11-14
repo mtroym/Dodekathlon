@@ -23,6 +23,7 @@ if __name__ == '__main__':
     opt, dataloader, model, loss, metrics = init_all()
     visualizer = Visualizer(opt)
     saver = Saver(opt)
+    saver.latest()
     # for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
     #     epoch_start_time = time.time()
     #     epoch_iter = 0

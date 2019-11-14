@@ -13,18 +13,18 @@ from PIL import Image
 def get_transform(opt):
     transform_list = []
     if opt.resize_or_crop == 'resize_and_crop':
-        osize = [opt.loadSize, opt.loadSize]
-        transform_list.append(transforms.Scale(osize, Image.BICUBIC))
-        transform_list.append(transforms.RandomCrop(opt.fineSize))
+        osize = [opt.load_size, opt.load_size]
+        transform_list.append(transforms.Resize(osize, Image.BICUBIC))
+        transform_list.append(transforms.RandomCrop(opt.fine_size))
     elif opt.resize_or_crop == 'crop':
-        transform_list.append(transforms.RandomCrop(opt.fineSize))
+        transform_list.append(transforms.RandomCrop(opt.fine_size))
     elif opt.resize_or_crop == 'scale_width':
         transform_list.append(transforms.Lambda(
-            lambda img: __scale_width(img, opt.fineSize)))
+            lambda img: __scale_width(img, opt.fine_size)))
     elif opt.resize_or_crop == 'scale_width_and_crop':
         transform_list.append(transforms.Lambda(
-            lambda img: __scale_width(img, opt.loadSize)))
-        transform_list.append(transforms.RandomCrop(opt.fineSize))
+            lambda img: __scale_width(img, opt.load_size)))
+        transform_list.append(transforms.RandomCrop(opt.fine_size))
 
     transform_list += [transforms.ToTensor(),
                        transforms.Normalize((0.5, 0.5, 0.5),

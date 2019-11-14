@@ -5,6 +5,9 @@ train_settings:
   model: Base
   epochs: !!int 32
   isTrain: TRUE
+  load_size: 32
+  fine_size: 32
+
 
 test_settings:
   inference: TRUE

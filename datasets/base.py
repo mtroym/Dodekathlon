@@ -10,7 +10,7 @@ def create_dataloader(opt):
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=opt.batchSize,
         shuffle=not opt.serial_batches,
-        num_workers=int(opt.nThreads))
+        num_workers=int(opt.num_workers))
     return dataloader
 
 
@@ -19,7 +19,7 @@ def create_dataset(opt):
     if opt.dataset == 'Base':
         pass
     elif opt.dataset == "KP":
-        dataset = KeypointDataset()
+        dataset = KeypointDataset(opt)
     return dataset
 
 

@@ -20,7 +20,7 @@ class BaseOptions:
         self.parser.add_argument('--name', type=str, default='experiment_name', help='name of the experiment. It decides where to store samples and models')
         self.parser.add_argument('--model', type=str, default='cycle_gan',
                                  help='chooses which model to use. cycle_gan, pix2pix, test')
-        self.parser.add_argument('--nThreads', default=2, type=int, help='# threads for loading data')
+        self.parser.add_argument('--num_workers', default=2, type=int, help='# threads for loading data')
         self.parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
         self.parser.add_argument('--norm', type=str, default='instance', help='instance normalization or batch normalization')
         self.parser.add_argument('--serial_batches', action='store_true', help='if true, takes images in order to make batches, otherwise takes them randomly')
@@ -37,6 +37,7 @@ class BaseOptions:
         self.parser.add_argument('--configure_file', type=str, default='configures/train.yaml', help='configure files.')
         self.parser.add_argument('--suffix', type=str, default='default', help='configure files.')
         self.parser.add_argument('--no_html', type=bool, default=False, help='configure files.')
+        self.parser.add_argument('--save_epoch', type=int, default=10, help='epochs to save.')
         self.opt = self.parser.parse_args()
         # down-sampling times
         self.initialized = True
@@ -59,6 +60,7 @@ class BaseOptions:
         exp_name = '-'.join([self.opt.model, self.opt.dataset, str(self.opt.lr), self.opt.optimizer, self.opt.suffix, time_str])
         expr_dir = os.path.join(self.opt.checkpoints_dir, self.opt.name, exp_name)
         self.opt.__setattr__('expr_dir', expr_dir)
+        self.opt.__setattr__('resume', expr_dir)
         util.make_dirs(expr_dir)
         file_name = os.path.join(expr_dir, 'opt.txt')
         print('=> make opt file in :\n\t{}'.format(os.path.abspath(file_name)))
