@@ -1,3 +1,13 @@
+---
+layout: archive
+title: "Dodekathlon"
+permalink: /Dodekathlon/
+author_profile: true
+redirect_from:
+  - /dodekathlon
+  - /pytorch
+---
+
 # `Dodekathlon`
 ![GitHub](https://img.shields.io/github/license/mtroym/Dodekathlon?logo=apache)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/pytorch/pytorch?logo=pytorch)
