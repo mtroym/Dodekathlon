@@ -58,4 +58,4 @@ Therefore, I chose `Dodekathlon`.
 - [ ] Distributed training process.
 - [ ] Visualization with `TensorBoard` embedded.
 - [ ] Example of PATN and Controllable Human Pose Transfer
-- [ ] Deploying using `oonx` and `TensorRT`
+- [ ] Deploying using `oonx` and `TensorRT` 
