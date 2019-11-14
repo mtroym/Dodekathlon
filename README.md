@@ -4,6 +4,7 @@
 ![GitHub top language](https://img.shields.io/github/languages/top/mtroym/Dodekathlon)
 ![GitHub code size in byte![GitHub top language](https://img.shields.io/github/languages/top/mtroym/Dodekathlon)s](https://img.shields.io/github/languages/code-size/mtroym/dodekathlon?)
 ![Liberapay receiving](https://img.shields.io/liberapay/receives/troymao)
+[![Donate](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/liberapay/donate)
 ## Updates: 
 - 2019-11-12 Name of my projects will be changed to the Myths from Ancient Greek.
 
