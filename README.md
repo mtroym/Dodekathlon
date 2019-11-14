@@ -1,13 +1,3 @@
----
-layout: archive
-title: "Dodekathlon"
-permalink: /Dodekathlon/
-author_profile: true
-redirect_from:
-  - /dodekathlon
-  - /pytorch
----
-
 # `Dodekathlon`
 ![GitHub](https://img.shields.io/github/license/mtroym/Dodekathlon?logo=apache)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/pytorch/pytorch?logo=pytorch)
@@ -16,7 +6,7 @@ redirect_from:
 ![Liberapay receiving](https://img.shields.io/liberapay/receives/troymao)
 [![Donate](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/liberapay/donate)
 ## Updates: 
-- 2019-11-12 Name of my projects will be changed to the Myths from Ancient Greek.
+- 2019-11-12 Name of [my projects](https://mtroym.github.io/) will be changed to the Myths from Ancient Greek.
 
 ## Reference of Titan `Dodekathlon`
 Before I chose this name `"Dodekathlon"`, I supposed to use Hercules, who was considered as
