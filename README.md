@@ -3,8 +3,10 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/pytorch/pytorch?logo=pytorch)
 ![GitHub top language](https://img.shields.io/github/languages/top/mtroym/Dodekathlon)
 ![GitHub code size in byte![GitHub top language](https://img.shields.io/github/languages/top/mtroym/Dodekathlon)s](https://img.shields.io/github/languages/code-size/mtroym/dodekathlon?)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/w/mtroym/Dodekathlon)
+![GitHub last commit](https://img.shields.io/github/last-commit/mtroym/Dodekathlon)
 ![Liberapay receiving](https://img.shields.io/liberapay/receives/troymao)
-[![Donate](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/liberapay/donate)
+[![Donate](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/troymao/donate)
 ## Updates: 
 - 2019-11-12 Name of [my projects](https://mtroym.github.io/) will be changed to the Myths from Ancient Greek.
 
@@ -52,7 +54,7 @@ Therefore, I chose `Dodekathlon`.
 
 
 ### `Canary` Plans.
-- [ ] Checkpoints support.
+- [x] Checkpoints support.
 - [ ] Distributed training process.
 - [ ] Visualization with `TensorBoard` embedded.
 - [ ] Example of PATN and Controllable Human Pose Transfer
