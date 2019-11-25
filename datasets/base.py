@@ -18,7 +18,7 @@ def create_dataset(opt):
     dataset = BaseDataset()
     if opt.dataset == 'Base':
         pass
-    elif opt.dataset == "KP":
+    elif opt.dataset == "KeyPointDataset":
         dataset = KeypointDataset(opt)
     return dataset
 

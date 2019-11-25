@@ -1,0 +1,8 @@
+
+base_dir: /Users/tony/Develop/data/fashion_resize/
+
+train_path: train
+train_keypoint_path: trainK
+val_path: test
+val_keypoint_path: testK
+train_pair_path: fashion-resize-pairs-train.csv

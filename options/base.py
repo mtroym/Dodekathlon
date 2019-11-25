@@ -30,17 +30,22 @@ class BaseOptions:
         self.parser.add_argument('--no_dropout', action='store_true', help='no dropout for the generator')
         self.parser.add_argument('--max_dataset_size', type=int, default=float("inf"),
                                  help='Maximum number of samples allowed per datasets. If the datasets directory contains more than max_dataset_size, only a subset is loaded.')
-        self.parser.add_argument('--resize_or_crop', type=str, default='resize_and_crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')
+        self.parser.add_argument('--resize_or_crop', type=str, default='resize_and_crop',
+                                 help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')
         self.parser.add_argument('--no_flip', action='store_true', help='if specified, do not flip the images for data augmentation')
         self.parser.add_argument('--init_type', type=str, default='normal', help='network initialization [normal|xavier|kaiming|orthogonal]')
         self.parser.add_argument('--padding_type', type=str, default='reflect', help='# of input image channels')
-        self.parser.add_argument('--configure_file', type=str, default='configures/train.yaml', help='configure files.')
+        self.parser.add_argument('--configure_path', type=str, default='configures', help='configure path.')
+        self.parser.add_argument('--configure_file', type=str, default='train.yaml', help='configure files.')
         self.parser.add_argument('--suffix', type=str, default='default', help='configure files.')
         self.parser.add_argument('--no_html', type=bool, default=False, help='configure files.')
         self.parser.add_argument('--save_epoch', type=int, default=10, help='epochs to save.')
+
         self.opt = self.parser.parse_args()
         # down-sampling times
         self.initialized = True
+        # build configure file.
+        self.opt.configure_file = os.path.join(self.opt.configure_path, self.opt.configure_file)
 
     def parse(self, configure=None):
         if not self.initialized:
@@ -60,6 +65,7 @@ class BaseOptions:
         exp_name = '-'.join([self.opt.model, self.opt.dataset, str(self.opt.lr), self.opt.optimizer, self.opt.suffix, time_str])
         expr_dir = os.path.join(self.opt.checkpoints_dir, self.opt.name, exp_name)
         self.opt.__setattr__('expr_dir', expr_dir)
+        self.opt.__setattr__('data_gen', self.opt.checkpoints_dir)
         self.opt.__setattr__('resume', expr_dir)
         util.make_dirs(expr_dir)
         file_name = os.path.join(expr_dir, 'opt.txt')

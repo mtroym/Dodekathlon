@@ -109,7 +109,7 @@ class Visualizer:
             X=np.stack([np.array(self.plot_data['X'])] * len(self.plot_data['legend']), 1),
             Y=np.array(self.plot_data['Y']),
             opts={
-                'title': self.name + ' loss over time',
+                'title' : self.name + ' loss over time',
                 'legend': self.plot_data['legend'],
                 'xlabel': 'epoch',
                 'ylabel': 'loss'},

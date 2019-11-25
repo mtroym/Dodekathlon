@@ -1,13 +1,13 @@
 train_settings:
   lr: !!float 0.001
   optimizer: Adam
-  dataset: KP
+  dataset: KeyPointDataset
   model: Base
   epochs: !!int 32
   isTrain: TRUE
   load_size: 32
   fine_size: 32
-
+  refresh: TRUE
 
 test_settings:
   inference: TRUE

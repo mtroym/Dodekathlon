@@ -55,7 +55,7 @@ Therefore, I chose `Dodekathlon`.
 
 ### `Canary` Plans.
 - [x] Checkpoints support.
+- [ ] Example of PATN and Controllable Human Pose Transfer
 - [ ] Distributed training process.
 - [ ] Visualization with `TensorBoard` embedded.
-- [ ] Example of PATN and Controllable Human Pose Transfer
 - [ ] Deploying using `oonx` and `TensorRT` 
