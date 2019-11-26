@@ -1,4 +1,5 @@
 import importlib
+import time
 
 from tools.Saver import Saver
 from tools.Visualizer import Visualizer
@@ -24,14 +25,15 @@ if __name__ == '__main__':
     visualizer = Visualizer(opt)
     saver = Saver(opt)
     saver.latest()
-    # for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
-    #     epoch_start_time = time.time()
-    #     epoch_iter = 0
-    #
-    #     for i, data in enumerate(dataloader):
-    #         iter_start_time = time.time()
-    #         visualizer.reset()
-    #         epoch_iter += opt.batchSize
+    for epoch in range(0, 1):
+        epoch_start_time = time.time()
+        epoch_iter = 0
+
+        for i, data in enumerate(dataloader):
+            iter_start_time = time.time()
+            #         visualizer.reset()
+            # pass
+            print(data["Source"].shape)
     #
     #         # todo: add this.
     #         model.set_input(data)

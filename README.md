@@ -10,6 +10,15 @@
 ## Updates: 
 - 2019-11-12 Name of [my projects](https://mtroym.github.io/) will be changed to the Myths from Ancient Greek.
 
+### `Hydra` Checklist.
+- [x] Checkpoints support.
+- [x] kp dataset/ kpparse dataset
+- [ ] training
+- [ ] models
+- [ ] losses
+- [ ] evaluations.
+- [ ] Example of PATN and Controllable Human Pose Transfer
+
 ## Reference of Titan `Dodekathlon`
 Before I chose this name `"Dodekathlon"`, I supposed to use Hercules, who was considered as
 a demi-god with strong labors. "Dodekathlon", considered as 12 Labors of Hercules, are 
@@ -44,6 +53,7 @@ Therefore, I chose `Dodekathlon`.
 │   ├── loss    // define the loss.
 │   └── metrics // define the metrics for evaluation.
 ├── datasets    // define the dataset. dataloader.
+├── deployments // deploy to the cloud using oonx.
 ├── main.py     // great dodekathlon main file.
 ├── models      // define the model here.
 ├── options     // define the options. DIFFS From configures.(Task level)
@@ -55,7 +65,8 @@ Therefore, I chose `Dodekathlon`.
 
 ### `Canary` Plans.
 - [x] Checkpoints support.
-- [ ] Example of PATN and Controllable Human Pose Transfer
+- [ ] Example of PATN and Controllable Human Pose Transfer `branch:hydra`
 - [ ] Distributed training process.
 - [ ] Visualization with `TensorBoard` embedded.
-- [ ] Deploying using `oonx` and `TensorRT` 
+- [ ] Deploying using `oonx` and `TensorRT`
+
