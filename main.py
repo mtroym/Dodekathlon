@@ -1,6 +1,8 @@
 import importlib
 import time
 
+import cv2
+
 from tools.Saver import Saver
 from tools.Visualizer import Visualizer
 
@@ -10,9 +12,9 @@ def init_all():
     opts = importlib.import_module('options.custom-options')
     opt_init = opts.TrainOptions().opt
 
-    data_lib = importlib.import_module('datasets.base')
-    models_lib = importlib.import_module('models.base')
-    criterions_lib = importlib.import_module('criterions.base')
+    data_lib = importlib.import_module('datasets')
+    models_lib = importlib.import_module('models')
+    criterions_lib = importlib.import_module('criterions')
 
     dataloader_init = data_lib.create_dataloader(opt_init)
     model_init = models_lib.create_model(opt_init)
@@ -33,7 +35,8 @@ if __name__ == '__main__':
             iter_start_time = time.time()
             #         visualizer.reset()
             # pass
-            print(data["Source"].shape)
+            cv2.imwrite("test.png", (data["Source"][0].data.numpy().transpose([1, 2, 0]) + 0.5) * 255)
+            cv2.imwrite("testkp.png", data["Source_KP"][0].data.numpy().sum(axis=-1) * 255)
     #
     #         # todo: add this.
     #         model.set_input(data)

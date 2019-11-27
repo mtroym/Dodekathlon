@@ -4,16 +4,6 @@ import torch
 import torch.nn as nn
 
 
-def create_model(opt):
-    model = BaseModel(opt)
-    if opt.model == 'Base':
-        pass
-    else:
-        raise ValueError("Model [%s] not recognized." % opt.model)
-
-    print("=> model [{}] was created".format(model.name))
-    return model
-
 
 class BaseModel(nn.Module):
     def __init__(self, opt):
