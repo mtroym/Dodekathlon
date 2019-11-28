@@ -35,8 +35,8 @@ if __name__ == '__main__':
             iter_start_time = time.time()
             #         visualizer.reset()
             # pass
-            cv2.imwrite("test.png", (data["Source"][0].data.numpy().transpose([1, 2, 0]) + 0.5) * 255)
-            cv2.imwrite("testkp.png", data["Source_KP"][0].data.numpy().sum(axis=-1) * 255)
+            # cv2.imwrite("test.png", (data["Source"][0].data.numpy().transpose([1, 2, 0]) + 0.5) * 255)
+            # cv2.imwrite("testkp.png", data["Source_KP"][0].data.numpy().sum(axis=-1) * 255)
     #
     #         # todo: add this.
     #         model.set_input(data)

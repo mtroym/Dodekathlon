@@ -7,7 +7,7 @@ train_settings:
   isTrain: TRUE
   load_size: 256
   fine_size: 256
-  refresh: FALSE
+  refresh: TRUE
   batchSize: 32
 
 test_settings:

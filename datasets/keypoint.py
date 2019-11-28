@@ -36,30 +36,46 @@ class KeypointDataset:
             self.transforms = transforms.Pad((80, 0, 80, 0), padding_mode='edge')
 
         self.preprocess = transforms.Compose([
-            self.transforms,  # custom preprocessing.
+            # self.transforms,  # custom pre-processing.
             get_transform(opt),
         ])
+
+        # data_path = os.path.join(self.configure["base_dir"], self.configure["{}_pair_path".format(split)])
         if os.path.exists(self.data_info_path) and not self.opt.refresh:
             print("=> load dataset information from {}".format(self.data_info_path))
             self.data_info = torch.load(self.data_info_path)
         else:
             print("=> create dataset information....")
             self.data_info = {
-                "base_dir": os.path.abspath(os.path.join(self.configure["base_dir"], self.configure["{}_path".format(split)])),
-                "blob"    : self._get_blob()
+                "blob": self._get_blob()
             }
+            # training entries
             with open(os.path.join(self.configure["base_dir"], self.configure["{}_pair_path".format(split)]), "r") as f:
                 pairs = f.read().split("\n")[1:-1]
                 self.pairs = list(map(lambda x: x.split(','), pairs))
+
+            # annotation path.
             with open(os.path.join(self.configure["base_dir"], self.configure["{}_annotation_path".format(split)]), "r") as f:
                 annotation = f.read().split("\n")[1:-1]
+
+            # store annotation.
             self.annotation_dict = {}
             for record in annotation:
-                try:
-                    k, r, c = record.split(':')
-                    self.annotation_dict[k] = [eval(r), eval(c)]
-                except Exception as e:
-                    pass
+                k, r, c = record.split(':')
+                self.annotation_dict[k] = [eval(r), eval(c)]
+
+            # build path dict.
+            data_path = self.configure["data_dir"]
+            self.path_dict = {}
+            for root, dirs, files in os.walk(data_path):
+                for file in files:
+                    real_path = os.path.join(root, file)
+                    full_path = os.path.join(root, file[:4] + file[5:])
+                    key = "fashion" + full_path.replace(data_path, '').replace('/', '').replace("id_", "id")
+                    self.path_dict[key] = real_path
+
+            # create checkpoint files. to load next time.
+            self.data_info["path_dict"] = self.path_dict
             self.data_info["annotation_dict"] = self.annotation_dict
             self.data_info["pairs"] = self.pairs
             self.data_info["total_num"] = len(self.data_info["pairs"])
@@ -68,9 +84,11 @@ class KeypointDataset:
         for k, v in self.data_info.items():
             self.__setattr__(k, v)
 
+        print("=> Total num of {}ing pairs: {}".format(self.split, self.__len__()))
+
     def _mapping_image2kp(self, image_path):
         return os.path.join(self.configure["base_dir"],
-                            self.configure["train_keypoint_path"],
+                            self.configure["{}_keypoint_path".format(self.split)],
                             image_path.split("/")[-1] + ".npy")
 
     @staticmethod
@@ -81,7 +99,8 @@ class KeypointDataset:
         return len(self.pairs)
 
     def _get_one(self, name):
-        img_path = os.path.join(self.base_dir, name)
+        # mapping to path.
+        img_path = self.path_dict[name]
         image = Image.open(img_path, 'r').convert('RGB')
         assert image is not None, "{}, image not exists, img_path".format(img_path)
         keypoint = self.kp2tensor(self.annotation_dict[name])
