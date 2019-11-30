@@ -118,13 +118,16 @@ class KeypointDataset:
         indx = [[], [], []]
         valu = []
         for i, (r, c) in enumerate(zip(corr[0], corr[1])):
-            # Note: This setting is only for deepfashion.
-            if r < 0 or c < 0 or r >= self.w or c + 40 >= self.h:
-                continue
-            indx[0].append(r)
-            indx[1].append(c + 40)
-            indx[2].append(i)
-            valu.append(1)
+            # Note: This setting is only for deepfashion256.
+            if self.opt.dataset == "deepfashion256":
+                if r < 0 or c < 0 or r >= self.w or c + 40 >= self.h:
+                    continue
+                indx[0].append(r)
+                indx[1].append(c + 40)
+                indx[2].append(i)
+                valu.append(1)
+            else:
+                raise NotImplementedError("The dataset has not implemented the kp2tensor method.")
         indices_list = torch.LongTensor(indx)
         tensor = torch.sparse_coo_tensor(indices_list, valu, size=(self.h, self.w, self.num_kp))
         return tensor

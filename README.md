@@ -8,18 +8,19 @@
 ![Liberapay receiving](https://img.shields.io/liberapay/receives/troymao)
 [![Donate](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/troymao/donate)
 ## Updates: 
+- 2019-11-28 `Hydra` version under construction.
 - 2019-11-12 Name of [my projects](https://mtroym.github.io/) will be changed to the Myths from Ancient Greek.
 
 ### `Hydra` Checklist.
 - [x] Checkpoints support.
 - [x] kp dataset/ kpparse dataset
-- [ ] training
 - [ ] models
+- [ ] training
 - [ ] losses
 - [ ] evaluations.
 - [ ] Example of PATN and Controllable Human Pose Transfer
 
-## Reference of Titan `Dodekathlon`
+## Reference of `Dodekathlon`
 Before I chose this name `"Dodekathlon"`, I supposed to use Hercules, who was considered as
 a demi-god with strong labors. "Dodekathlon", considered as 12 Labors of Hercules, are 
 how Hercules gained much of his mythological fame as a demi-god, listing as follows:
