@@ -26,7 +26,6 @@
 - [ ] training
 - [ ] losses
 - [ ] evaluations.
-- [ ] Example of PATN and Controllable Human Pose Transfer
 
 ## Canary Plans.
 
@@ -76,7 +75,8 @@ Before I chose this name "Dodekathlon", I supposed to use Hercules, who was cons
 a demi-god with strong labors. "Dodekathlon", considered as 12 Labors of Hercules, are 
 how Hercules gained much of his mythological fame as a demi-god, listing as follows:
 
-![Alt Twelve_Labours_Altemps](https://ws1.sinaimg.cn/large/006tfJvWly1g9majoxf24j32u30w8u0y.jpg)
+![Alt Twelve_Labours_Altemps](https://s2.ax1x.com/2019/12/06/QGoZ5t.md.jpg) (picture credit to wikipedia)
+
 - Slay the `Nemean` Lion.
 - Slay the nine-headed `Lernaean Hydra`.
 - Capture the Golden Hind of `Artemis`.
