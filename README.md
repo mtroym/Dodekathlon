@@ -22,7 +22,7 @@
 - [ ] losses
 - [ ] evaluations.
 - [ ] Example of PATN and Controllable Human Pose Transfer
-
+ 
 ### citation
 if you find this code benefits your research, please take the citation at ease:
 ```latex bib
