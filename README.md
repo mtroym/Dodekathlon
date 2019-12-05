@@ -38,7 +38,7 @@
 if you find this code benefits your research, please take the citation at ease:
 
 
-```latex bib
+```
 @inproceedings{zhu2019progressive,
   title={Progressive Pose Attention Transfer for Person Image Generation},
   author={Zhu, Zhen and Huang, Tengteng and Shi, Baoguang and Yu, Miao and Wang, Bofei and Bai, Xiang},
