@@ -33,6 +33,8 @@ if __name__ == '__main__':
 
         for i, data in enumerate(dataloader):
             iter_start_time = time.time()
+            vis, loss, metrics = model.train_batch(inputs=data, loss=loss, metrics=metrics)
+            visualizer.display_current_results(vis, epoch, save_result=True)
             #         visualizer.reset()
             # pass
             # cv2.imwrite("test.png", (data["Source"][0].data.numpy().transpose([1, 2, 0]) + 0.5) * 255)

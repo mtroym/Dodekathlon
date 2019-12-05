@@ -4,3 +4,5 @@ shuffle: TRUE
 train_pair_path: fashion-resize-pairs-train.csv
 train_annotation_path: fashion-resize-annotation-train.csv
 test_annotation_path: fashion-resize-annotation-test.csv
+keypoint: 18
+channel: 3

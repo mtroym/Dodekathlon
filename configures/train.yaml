@@ -2,13 +2,15 @@ train_settings:
   lr: !!float 0.001
   optimizer: Adam
   dataset: deepfashion256
-  model: Base
+  model: PATN
   epochs: !!int 32
   isTrain: TRUE
   load_size: 256
   fine_size: 256
-  refresh: TRUE
+  refresh: FALSE
   batchSize: 32
+  dropout_rate: 0.5
+  hidden: 16
 
 test_settings:
   inference: TRUE

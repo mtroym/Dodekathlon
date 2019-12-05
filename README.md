@@ -14,13 +14,26 @@
 
 ## Reference of Hercules `Dodekathlon`
 ### `Hydra` Checklist.
+![Alt PATN](.github/assets/PATN.png)
 - [x] Checkpoints support.
 - [x] kp dataset/ kpparse dataset
-- [ ] models
+- [x] model for PATN
 - [ ] training
 - [ ] losses
 - [ ] evaluations.
 - [ ] Example of PATN and Controllable Human Pose Transfer
+
+### citation
+if you find this code benefits your research, please take the citation at ease:
+```latex bib
+@inproceedings{zhu2019progressive,
+  title={Progressive Pose Attention Transfer for Person Image Generation},
+  author={Zhu, Zhen and Huang, Tengteng and Shi, Baoguang and Yu, Miao and Wang, Bofei and Bai, Xiang},
+  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition},
+  pages={2347--2356},
+  year={2019}
+}
+```
 
 ## Reference of `Dodekathlon`
 Before I chose this name `"Dodekathlon"`, I supposed to use Hercules, who was considered as

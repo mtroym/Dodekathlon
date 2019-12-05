@@ -23,9 +23,14 @@ class KeypointDataset:
         self.base_dir = None
         self.split = split
         self.opt = opt
+        # set out space params.
+
         self.data_info_path = os.path.join(self.opt.data_gen, self.opt.dataset + "_{}_info.pth.tar".format(split))
         self.num_kp = 18
         self.configure = yaml.load(open(os.path.join(self.opt.configure_path, self.opt.dataset + '.yaml'), 'r'))
+
+        self.opt.__setattr__('in_channel', self.configure['channel'])
+        self.opt.__setattr__('keypoint', self.configure['keypoint'])
 
         # custom this from multiple datasets.
         if self.opt.dataset == "deepfashion256":
@@ -93,7 +98,7 @@ class KeypointDataset:
 
     @staticmethod
     def _get_blob(src=None, kp0=None, trg=None, kp1=None):
-        return {"Source": src, "Source_KP": kp0, "Target": trg, "Target_KP": kp1}
+        return {"Source": src, "SourceKP": kp0, "Target": trg, "TargetKP": kp1}
 
     def __len__(self):
         return len(self.pairs)
@@ -110,7 +115,8 @@ class KeypointDataset:
         pair = self.pairs[idx]
         (src, src_kp), (trg, trg_kp) = self._get_one(pair[0]), self._get_one(pair[1])
         src, trg = self.preprocess(src), self.preprocess(trg)
-        src_kp, trg_kp = src_kp.to_dense(), src_kp.to_dense()
+        src_kp, trg_kp = src_kp.to_dense().float(), src_kp.to_dense().float()
+        src_kp, trg_kp = src_kp.permute([-1, 0, 1]), trg_kp.permute([-1, 0, 1])
         blob = self._get_blob(src, src_kp, trg, trg_kp)
         return blob
 
