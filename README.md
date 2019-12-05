@@ -1,4 +1,6 @@
 # `Dodekathlon`
+
+
 ![GitHub](https://img.shields.io/github/license/mtroym/Dodekathlon?logo=apache)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/pytorch/pytorch?logo=pytorch)
 ![GitHub top language](https://img.shields.io/github/languages/top/mtroym/Dodekathlon)
@@ -8,13 +10,20 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/mtroym/Dodekathlon)
 ![Liberapay receiving](https://img.shields.io/liberapay/receives/troymao)
 [![Donate](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/troymao/donate)
+
+
 ## Updates: 
+
+
 - 2019-11-28 `Hydra` version under construction.
 - 2019-11-12 Name of [my projects](https://mtroym.github.io/) will be changed to the Myths from Ancient Greek.
 
 ## Reference of Hercules `Dodekathlon`
+
+
 ### `Hydra` Checklist.
-![Alt PATN](.github/assets/PATN.png)
+
+![PATN.png](https://i.loli.net/2019/12/05/qO8u56aR73mWGvD.png)
 - [x] Checkpoints support.
 - [x] kp dataset/ kpparse dataset
 - [x] model for PATN
@@ -28,6 +37,7 @@
 ---
 if you find this code benefits your research, please take the citation at ease:
 
+
 ```latex bib
 @inproceedings{zhu2019progressive,
   title={Progressive Pose Attention Transfer for Person Image Generation},
@@ -38,11 +48,14 @@ if you find this code benefits your research, please take the citation at ease:
 }
 ```
 
-## Reference of `Dodekathlon`
-Before I chose this name `"Dodekathlon"`, I supposed to use Hercules, who was considered as
+
+## Reference of Dodekathlon
+
+
+Before I chose this name "Dodekathlon", I supposed to use Hercules, who was considered as
 a demi-god with strong labors. "Dodekathlon", considered as 12 Labors of Hercules, are 
 how Hercules gained much of his mythological fame as a demi-god, listing as follows:
-    
+
 - Slay the `Nemean` Lion.
 - Slay the nine-headed `Lernaean Hydra`.
 - Capture the Golden Hind of `Artemis`.
@@ -61,7 +74,9 @@ This project combines Training, Testing, Deploying, Visualization, Evaluation, C
 and Resuming, etc., each of them is challenging and in great modularization. 
 Therefore, I chose `Dodekathlon`. 
 
+
 ## Structure of `Dodekathlon`
+
 
 ### Tree.
 ```shell
