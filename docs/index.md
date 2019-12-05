@@ -14,7 +14,7 @@
 
 ## Reference of Hercules `Dodekathlon`
 ### `Hydra` Checklist.
-![Alt PATN](.github/assets/PATN.png)
+![Alt PATN](../.github/assets/PATN.png)
 - [x] Checkpoints support.
 - [x] kp dataset/ kpparse dataset
 - [x] model for PATN
