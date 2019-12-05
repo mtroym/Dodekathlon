@@ -1,4 +1,4 @@
-# `Dodekathlon`
+# **_Dodekathlon_**
 
 
 ![GitHub](https://img.shields.io/github/license/mtroym/Dodekathlon?logo=apache)
@@ -14,15 +14,11 @@
 
 ## Updates: 
 
-
-- 2019-11-28 `Hydra` version under construction.
+- 2019-11-28 Hydra version under construction.
 - 2019-11-12 Name of [my projects](https://mtroym.github.io/) will be changed to the Myths from Ancient Greek.
 
-## Reference of Hercules `Dodekathlon`
 
-
-### `Hydra` Checklist.
-
+## Hydra Checklist.
 ![PATN.png](https://i.loli.net/2019/12/05/qO8u56aR73mWGvD.png)
 - [x] Checkpoints support.
 - [x] kp dataset/ kpparse dataset
@@ -31,10 +27,16 @@
 - [ ] losses
 - [ ] evaluations.
 - [ ] Example of PATN and Controllable Human Pose Transfer
- 
-### citation
 
----
+## Canary Plans.
+
+- [ ] Example of PATN and Controllable Human Pose Transfer `branch:hydra`
+- [ ] Distributed training process.
+- [ ] Visualization with `TensorBoard` embedded.
+- [ ] Deploying using `oonx` and `TensorRT`
+
+
+## Citation
 if you find this code benefits your research, please take the citation at ease:
 
 
@@ -48,14 +50,33 @@ if you find this code benefits your research, please take the citation at ease:
 }
 ```
 
+## Structure of `Dodekathlon`
 
-## Reference of Dodekathlon
+```shell
+├── configures
+│   ├── train.yaml // The configures. (Trail Level)
+│   └── ....    // store the yaml configure.
+├── criterions  // define the criterions train and test.
+│   ├── loss    // define the loss.
+│   └── metrics // define the metrics for evaluation.
+├── datasets    // define the dataset. dataloader.
+├── deployments // deploy to the cloud using oonx.
+├── main.py     // great dodekathlon main file.
+├── models      // define the model here.
+├── options     // define the options. DIFFS From configures.(Task level)
+├── requirements.txt // try 'pip install -Ur requirements.txt'
+├── tools       // some useful tools(object oriented).
+└── utils       // some useful functions.
+```
 
+
+## Reference of Hercules `Dodekathlon`
 
 Before I chose this name "Dodekathlon", I supposed to use Hercules, who was considered as
 a demi-god with strong labors. "Dodekathlon", considered as 12 Labors of Hercules, are 
 how Hercules gained much of his mythological fame as a demi-god, listing as follows:
 
+![Alt Twelve_Labours_Altemps](https://ws1.sinaimg.cn/large/006tfJvWly1g9majoxf24j32u30w8u0y.jpg)
 - Slay the `Nemean` Lion.
 - Slay the nine-headed `Lernaean Hydra`.
 - Capture the Golden Hind of `Artemis`.
@@ -73,35 +94,3 @@ As PyTorch is from Torch, whose meaning is a sticker with flames and fires.
 This project combines Training, Testing, Deploying, Visualization, Evaluation, Checkpoints
 and Resuming, etc., each of them is challenging and in great modularization. 
 Therefore, I chose `Dodekathlon`. 
-
-
-## Structure of `Dodekathlon`
-
-
-### Tree.
-```shell
-├── configures
-│   ├── train.yaml // The configures. (Trail Level)
-│   └── ....    // store the yaml configure.
-├── criterions  // define the criterions train and test.
-│   ├── loss    // define the loss.
-│   └── metrics // define the metrics for evaluation.
-├── datasets    // define the dataset. dataloader.
-├── deployments // deploy to the cloud using oonx.
-├── main.py     // great dodekathlon main file.
-├── models      // define the model here.
-├── options     // define the options. DIFFS From configures.(Task level)
-├── requirements.txt // try 'pip install -U requirements.txt'
-├── tools       // some useful tools(object oriented).
-└── utils       // some useful functions.
-```
-
-
-### `Canary` Plans.
-
-- [x] Checkpoints support.
-- [ ] Example of PATN and Controllable Human Pose Transfer `branch:hydra`
-- [ ] Distributed training process.
-- [ ] Visualization with `TensorBoard` embedded.
-- [ ] Deploying using `oonx` and `TensorRT`
-
