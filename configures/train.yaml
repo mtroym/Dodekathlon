@@ -11,6 +11,8 @@ train_settings:
   batchSize: 32
   dropout_rate: 0.5
   hidden: 16
+  beta1: 0.1
+  lr_policy: plateau
 
 test_settings:
   inference: TRUE

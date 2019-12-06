@@ -13,38 +13,7 @@ import torch
 import torch.nn as nn
 
 from .blocks import ResnetDiscriminator
-from .helpers import custom_pad, get_norm_layer, init_weights
-
-
-class PATNTransferModel(object):
-    def __init__(self, opt):
-        self.name = 'PATN'
-        self.opt = opt
-        self.is_train = True
-        self.batch_size = opt.batchSize
-        self.gpu_ids = opt.gpu_ids if opt.gpu_ids else []
-        self.dtype = torch.cuda.FloatTensor if len(self.gpu_ids) != 0 else torch.FloatTensor
-        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
-        self.D = PATNDiscriminator(opt, in_channel=self.opt.in_channel, hidden=self.opt.hidden)
-        self.G = PATNGenerator(opt, out_channel=self.opt.in_channel, hidden=self.opt.hidden)
-
-        self.optimizer_D = None
-        self.optimizer_G = None
-
-    def cuda(self):
-        self.D.cuda()
-        self.G.cuda()
-        self.optimizer_D.cuda()
-        self.optimizer_G.cuda()
-
-    def train_batch(self, inputs: dict, loss: dict, metrics: dict) -> dict:
-        out = self.D(inputs)
-        # loss#
-        out = self.G(inputs)
-        return {"visuals": None, "scalars": None}
-
-    def eval_batch(self, inputs: dict, loss: dict = None, metrics: dict = None):
-        return {"visuals": None, "scalars": None}
+from .helpers import custom_pad, get_norm_layer, get_scheduler, init_weights
 
 
 class PATNDiscriminator(nn.Module):
@@ -52,11 +21,12 @@ class PATNDiscriminator(nn.Module):
                  num_blocks=3, norm="instance", use_sigmoid=False,
                  init_type='normal', gpu_ids: list = None,
                  dropout=0.5, n_downsampling=2):
-        self.opt = opt
         super(PATNDiscriminator, self).__init__()
+        self.opt = opt
         self.gpu_ids = gpu_ids if gpu_ids else []
         self.norm_layer = get_norm_layer(norm)
         self.dropout = dropout if dropout is not None else False
+        self.discriminators = []
         if backbone == "resnet":
             self.core_fake_kp = ResnetDiscriminator(in_channel * 2, hidden, norm_layer=self.norm_layer,
                                                     use_dropout=dropout, use_sigmoid=use_sigmoid, n_blocks=num_blocks,
@@ -65,6 +35,7 @@ class PATNDiscriminator(nn.Module):
             self.core_fake_target = ResnetDiscriminator(in_channel + self.opt.keypoint, hidden, norm_layer=self.norm_layer,
                                                         use_dropout=dropout, use_sigmoid=use_sigmoid, n_blocks=num_blocks,
                                                         padding_type='reflect', n_downsampling=n_downsampling)
+            self.discriminators = [self.core_fake_kp, self.core_fake_target]
         else:
             raise NotImplementedError("model backbone not implemented.")
         if len(self.gpu_ids) != 0:
@@ -243,6 +214,51 @@ class PATNGenerator(nn.Module):
 
         decoded = self.decoder(source_encoded)
         return {"FakeImage": decoded}
+
+
+class PATNTransferModel:
+    def __init__(self, opt):
+        self.name = 'PATN'
+        self.opt = opt
+        self.is_train = True
+        self.batch_size = opt.batchSize
+        self.gpu_ids = opt.gpu_ids if opt.gpu_ids else []
+        self.dtype = torch.cuda.FloatTensor if len(self.gpu_ids) != 0 else torch.FloatTensor
+        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        self.discr: PATNDiscriminator = PATNDiscriminator(opt, in_channel=self.opt.in_channel, hidden=self.opt.hidden)
+        self.gener: PATNGenerator = PATNGenerator(opt, out_channel=self.opt.in_channel, hidden=self.opt.hidden)
+        self.optimizers_D = [torch.optim.Adam(net.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+                             for net in self.discr.discriminators]
+        self.optimizer_G = torch.optim.Adam(self.gener.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+        self.schedulars_D = [get_scheduler(optimizer, opt) for optimizer in self.optimizers_D]
+        self.schedular_G = get_scheduler(self.optimizer_G, opt)
+
+    def cuda(self):
+        self.discr.cuda()
+        self.gener.cuda()
+        # [optim.cuda() for optim in self.optimizers_D]
+        # self.optimizer_G.cuda()
+
+    def train_batch(self, inputs: dict, loss: dict, metrics: dict) -> dict:
+        fake_out = self.gener(inputs)
+        # G once.
+        self.optimizer_G.zero_grad()
+        pred_out = self.discr(fake_out.update(inputs))
+        loss_gan = loss["GANLoss"](pred_out["fake"], 0)
+        loss_gan += loss["GANLoss"](pred_out["real"], 1)
+        loss_gan.backword()
+        # note.
+        self.optimizer_G.step()
+        for i in range(len(self.optimizers_D)):
+            self.optimizers_D[i].zero_grad()
+
+        # loss_G = self.critierion(out, False/True)
+        # loss#
+        out = self.gener(inputs)
+        return {"visuals": None, "scalars": None}
+
+    def eval_batch(self, inputs: dict, loss: dict = None, metrics: dict = None):
+        return {"visuals": None, "scalars": None}
 
 
 if __name__ == '__main__':
