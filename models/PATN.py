@@ -9,51 +9,13 @@
 import functools
 import os
 
+import cv2
+import numpy as np
 import torch
 import torch.nn as nn
 
 from .blocks import ResnetDiscriminator
 from .helpers import custom_pad, get_norm_layer, get_scheduler, init_weights
-
-
-class PATNDiscriminator(nn.Module):
-    def __init__(self, opt, in_channel, hidden, backbone="resnet",
-                 num_blocks=3, norm="instance", use_sigmoid=False,
-                 init_type='normal', gpu_ids: list = None,
-                 dropout=0.5, n_downsampling=2):
-        super(PATNDiscriminator, self).__init__()
-        self.opt = opt
-        self.gpu_ids = gpu_ids if gpu_ids else []
-        self.norm_layer = get_norm_layer(norm)
-        self.dropout = dropout if dropout is not None else False
-        self.discriminators = []
-        if backbone == "resnet":
-            self.core_fake_kp = ResnetDiscriminator(in_channel * 2, hidden, norm_layer=self.norm_layer,
-                                                    use_dropout=dropout, use_sigmoid=use_sigmoid, n_blocks=num_blocks,
-                                                    padding_type='reflect', n_downsampling=n_downsampling)
-
-            self.core_fake_target = ResnetDiscriminator(in_channel + self.opt.keypoint, hidden, norm_layer=self.norm_layer,
-                                                        use_dropout=dropout, use_sigmoid=use_sigmoid, n_blocks=num_blocks,
-                                                        padding_type='reflect', n_downsampling=n_downsampling)
-            self.discriminators = [self.core_fake_kp, self.core_fake_target]
-        else:
-            raise NotImplementedError("model backbone not implemented.")
-        if len(self.gpu_ids) != 0:
-            self.core_fake_kp.cuda()
-            self.core_fake_target.cuda()
-        if not self.opt.resume:
-            init_weights(self.core_fake_kp, init_type)
-            init_weights(self.core_fake_target, init_type)
-
-    def forward(self, inputs: dict):
-        outputs = {}
-        source = inputs["FakeImage"]
-        keypoint = inputs["TargetKP"]
-        target = inputs["Target"]
-        assert source.shape[2:] == keypoint[2:]
-        outputs["PredFakePose"] = self.core_fake_kp(torch.cat([source, keypoint], dim=1))
-        outputs["PredFakeAppearance"] = self.core_fake_target(torch.cat([source, target], dim=1))
-        return outputs
 
 
 class PATNEncoder(nn.Module):
@@ -107,7 +69,7 @@ class PATNDecoder(nn.Module):
             in_cha = self.hidden * 2 ** (n_downsampling - i)
             out_cha = self.hidden * 2 ** (n_downsampling - i - 1)
             self.model_list += make_decoder_layer(in_channel=in_cha, hidden=out_cha, norm_layer=norm_layer,
-                                                  kernel_size=3, stride=2, padding=1, use_bias=use_bias,
+                                                  kernel_size=3, stride=2, padding=1, out_padding=1, use_bias=use_bias,
                                                   activation=self.activation)
         self.model_list += [
             nn.ReflectionPad2d(3),
@@ -117,12 +79,14 @@ class PATNDecoder(nn.Module):
         self.model = nn.Sequential(*self.model_list)
 
     def forward(self, inputs):
+        print(inputs.shape)
         return self.model(inputs)
 
 
-def make_decoder_layer(in_channel, hidden, norm_layer, kernel_size=7, padding=0, use_bias=True, activation=nn.ReLU, stride=1):
-    return [nn.ConvTranspose2d(in_channel, hidden, kernel_size=kernel_size,
-                               padding=padding, bias=use_bias, stride=stride),
+def make_decoder_layer(in_channel, hidden, norm_layer, kernel_size=7, padding=0, out_padding=0,
+                       use_bias=True, activation=nn.ReLU, stride=1):
+    return [nn.ConvTranspose2d(in_channel, hidden, kernel_size=kernel_size, padding=padding,
+                               output_padding=out_padding, bias=use_bias, stride=stride),
             norm_layer(hidden),
             activation(inplace=True)]
 
@@ -205,7 +169,6 @@ class PATNGenerator(nn.Module):
         source = inputs["Source"]
         source_kp = inputs["SourceKP"]
         target_kp = inputs["TargetKP"]
-
         source_encoded = self.encoder_image(source)
         keypoint_encoded = self.encoder_poses(torch.cat([source_kp, target_kp], dim=1))
 
@@ -214,6 +177,55 @@ class PATNGenerator(nn.Module):
 
         decoded = self.decoder(source_encoded)
         return {"FakeImage": decoded}
+
+
+class PATNDiscriminator(nn.Module):
+    def __init__(self, opt, in_channel, hidden, backbone="resnet",
+                 num_blocks=3, norm="instance", use_sigmoid=False,
+                 init_type='normal', gpu_ids: list = None,
+                 dropout=0.5, n_downsampling=2):
+        super(PATNDiscriminator, self).__init__()
+        self.opt = opt
+        self.gpu_ids = gpu_ids if gpu_ids else []
+        self.norm_layer = get_norm_layer(norm)
+        self.dropout = dropout if dropout is not None else False
+        self.discriminators = []
+        if backbone == "resnet":
+            self.core_fake_kp = ResnetDiscriminator(in_channel + self.opt.keypoint, hidden, norm_layer=self.norm_layer,
+                                                    use_dropout=dropout, use_sigmoid=use_sigmoid, n_blocks=num_blocks,
+                                                    padding_type='reflect', n_downsampling=n_downsampling)
+
+            self.core_fake_target = ResnetDiscriminator(in_channel * 2, hidden, norm_layer=self.norm_layer,
+                                                        use_dropout=dropout, use_sigmoid=use_sigmoid, n_blocks=num_blocks,
+                                                        padding_type='reflect', n_downsampling=n_downsampling)
+            self.discriminators = [self.core_fake_kp, self.core_fake_target]
+        else:
+            raise NotImplementedError("model backbone not implemented.")
+        if len(self.gpu_ids) != 0:
+            self.core_fake_kp.cuda()
+            self.core_fake_target.cuda()
+        if not self.opt.resume:
+            init_weights(self.core_fake_kp, init_type)
+            init_weights(self.core_fake_target, init_type)
+
+    def forward(self, inputs: dict):
+        outputs = {}
+        source = inputs["FakeImage"]
+        keypoint = inputs["TargetKP"]
+        target = inputs["Target"]
+        assert source.shape[2:] == keypoint.shape[2:]
+        outputs["PredFakePose"] = self.core_fake_kp(torch.cat([source, keypoint], dim=1))
+        outputs["PredFakeAppearance"] = self.core_fake_target(torch.cat([source, target], dim=1))
+        # return the predict if the fake is real in 2 directions.
+        return outputs
+
+
+def make_vis(fake_out, inputs):
+    fake = (fake_out["FakeImage"].detach().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
+    gt = (inputs["Target"].numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
+    src = (inputs["Source"].numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
+    total = np.concatenate([fake, gt, src], 2)
+    cv2.imwrite("test.png", total[0])
 
 
 class PATNTransferModel:
@@ -240,25 +252,104 @@ class PATNTransferModel:
         # self.optimizer_G.cuda()
 
     def train_batch(self, inputs: dict, loss: dict, metrics: dict) -> dict:
-        fake_out = self.gener(inputs)
-        # G once.
-        self.optimizer_G.zero_grad()
-        pred_out = self.discr(fake_out.update(inputs))
-        loss_gan = loss["GANLoss"](pred_out["fake"], 0)
-        loss_gan += loss["GANLoss"](pred_out["real"], 1)
-        loss_gan.backword()
-        # note.
-        self.optimizer_G.step()
-        for i in range(len(self.optimizers_D)):
-            self.optimizers_D[i].zero_grad()
+        loss_accum = {}
 
-        # loss_G = self.critierion(out, False/True)
-        # loss#
-        out = self.gener(inputs)
-        return {"visuals": None, "scalars": None}
+        # D:
+        fake_out = self.gener(inputs)  # {"FakeImage": ...}
+        self.optimizer_G.zero_grad()
+        fake_pred_out = self.discr({"FakeImage": fake_out["FakeImage"],
+                                    "TargetKP" : inputs["TargetKP"],
+                                    "Target"   : inputs["Target"]})
+        loss_accum["loss_D_appear1"] = nn.MSELoss()(fake_out["FakeImage"], inputs["Target"])
+        loss_accum["loss_GAN_pose"] = loss["gan_loss"](fake_pred_out["PredFakePose"],
+                                                       torch.full_like(fake_pred_out["PredFakePose"], 1))
+        loss_accum["loss_GAN_appear"] = loss["gan_loss"](fake_pred_out["PredFakeAppearance"],
+                                                         torch.full_like(fake_pred_out["PredFakeAppearance"], 1))
+        loss_accum["loss_GAN_L1"] = loss["l1_loss"](fake_out["FakeImage"], inputs["Source"])
+
+        loss_bk = loss_accum["loss_D_appear1"] + (loss_accum["loss_GAN_pose"] + loss_accum["loss_GAN_appear"]) / 2 + loss_accum["loss_GAN_L1"]
+        loss_bk.backward()
+        self.optimizer_G.step()
+
+        # No.1 D
+        for i in range(len(self.optimizers_D)):
+            self.optimizers_D[0].zero_grad()
+        # TODO: Iamge Pool..
+        real_pred_out = self.discr({
+            "FakeImage": inputs["Target"],
+            "TargetKP" : inputs["TargetKP"],
+            "Target"   : inputs["Target"]
+        })
+        print(fake_pred_out["PredFakeAppearance"].shape)
+        loss_accum["loss_D_appear"] = loss["gan_loss"](fake_pred_out["PredFakeAppearance"].detach(),
+                                                       torch.full_like(fake_pred_out["PredFakeAppearance"], 0))
+        loss_accum["loss_D_pose"] = loss["gan_loss"](fake_pred_out["PredFakePose"].detach(),
+                                                     torch.full_like(fake_pred_out["PredFakePose"], 0))
+
+        loss_accum["loss_D_appear"] += loss["gan_loss"](real_pred_out["PredFakeAppearance"],
+                                                        torch.full_like(real_pred_out["PredFakeAppearance"], 1))
+        loss_accum["loss_D_pose"] += loss["gan_loss"](real_pred_out["PredFakePose"],
+                                                      torch.full_like(real_pred_out["PredFakePose"], 1))
+
+        loss_accum["loss_D_appear"] /= 2
+        loss_accum["loss_D_pose"] /= 2
+        loss_D_bk = loss_accum["loss_D_appear"] + loss_accum["loss_D_pose"]
+        loss_D_bk.backward()
+        print(loss_D_bk.item(), loss_bk.item())
+        for i in range(len(self.optimizers_D)):
+            self.optimizers_D[i].step()
+
+        vis = make_vis(fake_out, inputs)
+        return {"visuals": vis, "scalars": loss_accum}
 
     def eval_batch(self, inputs: dict, loss: dict = None, metrics: dict = None):
         return {"visuals": None, "scalars": None}
+
+    """
+    https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html
+    Training
+
+    Part 1 - Train the Discriminator
+        First, we will construct a batch of real samples from the training set, 
+        forward pass through D, calculate the loss (log(D(x))), then calculate the gradients in a backward pass. 
+
+        Secondly, we will construct a batch of fake samples with the current generator, 
+        forward pass this batch through D, calculate the loss (log(1−D(G(z)))), and 
+        accumulate the gradients with a backward pass. 
+
+    Part 2 - Train the Generator
+
+        As stated in the original paper, we want to train the Generator by minimizing 
+        log(1−D(G(z))) in an effort to generate better fakes. As mentioned, this was 
+        shown by Goodfellow to not provide sufficient gradients, especially early in 
+        the learning process. As a fix, we instead wish to maximize log(D(G(z))). 
+        In the code we accomplish this by: classifying the Generator output from Part 1 
+        with the Discriminator, computing G’s loss using real labels as GT, 
+        computing G’s gradients in a backward pass, and finally updating G’s parameters 
+        with an optimizer step. It may seem counter-intuitive to use the real labels as 
+        GT labels for the loss function, but this allows us to use the log(x) part of the 
+        BCELoss (rather than the log(1−x) part) which is exactly what we want.
+
+    Finally, we will do some statistic reporting and at the end of each epoch we will 
+    push our fixed_noise batch through the generator to visually track the progress 
+    of G’s training. 
+
+    The training statistics reported are:
+    Loss_D 
+        - discriminator loss calculated as the sum of losses for the all real and 
+        all fake batches (log(D(x))+log(D(G(z)))).
+    Loss_G 
+        - generator loss calculated as log(D(G(z)))
+    D(x) 
+        - the average output (across the batch) of the discriminator for the
+        all real batch. This should start close to 1 then theoretically converge 
+        to 0.5 when G gets better. Think about why this is.
+    D(G(z)) 
+        - average discriminator outputs for the all fake batch. The first number 
+        is before D is updated and the second number is after D is updated. These 
+        numbers should start near 0 and converge to 0.5 as G gets better. Think 
+        about why this is.
+    """
 
 
 if __name__ == '__main__':

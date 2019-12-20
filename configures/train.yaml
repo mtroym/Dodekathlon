@@ -1,18 +1,21 @@
 train_settings:
-  lr: !!float 0.001
-  optimizer: Adam
-  dataset: deepfashion256
-  model: PATN
-  epochs: !!int 32
-  isTrain: TRUE
-  load_size: 256
-  fine_size: 256
-  refresh: FALSE
-  batchSize: 32
-  dropout_rate: 0.5
-  hidden: 16
-  beta1: 0.1
-  lr_policy: plateau
+    lr: !!float 0.001
+    optimizer: Adam
+    dataset: deepfashion256
+    model: PATN
+    epochs: !!int 32
+    isTrain: TRUE
+    load_size: 256
+    fine_size: 256
+    refresh: FALSE
+    batchSize: 2
+    dropout_rate: 0.5
+    hidden: 16
+    beta1: 0.1
+    lr_policy: plateau
+    loss:
+        gan_loss: [0.0, MSE]
+        l1_loss: [1.0, L1]
 
 test_settings:
-  inference: TRUE
+    inference: TRUE
