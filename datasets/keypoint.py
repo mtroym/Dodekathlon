@@ -26,9 +26,9 @@ class KeypointDataset:
         # set out space params.
 
         self.data_info_path = os.path.join(self.opt.data_gen, self.opt.dataset + "_{}_info.pth.tar".format(split))
-        self.num_kp = 18
         self.configure = yaml.load(open(os.path.join(self.opt.configure_path, self.opt.dataset + '.yaml'), 'r'))
 
+        self.num_kp = self.configure['keypoint']
         self.opt.__setattr__('in_channel', self.configure['channel'])
         self.opt.__setattr__('keypoint', self.configure['keypoint'])
 

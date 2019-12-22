@@ -1,8 +1,10 @@
 base_dir: /Users/tony/Develop/data/fashion_resize/  # data dir of deepfashion origin data download from website.
 data_dir: /Users/tony/Downloads/img  # data dir of deepfashion origin data download from website.
+parsing_dir: /Users/tony/Develop/data/fashion_resize/semanticJPPm  # data dir of deepfashion semantic parsing.
 shuffle: TRUE
 train_pair_path: fashion-resize-pairs-train.csv
 train_annotation_path: fashion-resize-annotation-train.csv
 test_annotation_path: fashion-resize-annotation-test.csv
 keypoint: 18
+semantic: 20 # JPPm: 20 / merge: ?
 channel: 3

@@ -2,6 +2,7 @@ from torch.utils.data import DataLoader
 
 from datasets.base import BaseDataset
 from datasets.keypoint import KeypointDataset
+from datasets.keypoint_parsing import KeypointParsingDataset
 
 
 def create_dataset(opt):
@@ -9,7 +10,7 @@ def create_dataset(opt):
     if opt.dataset == 'Base':
         dataset = BaseDataset()
     elif opt.dataset in ["deepfashion256", "market1501", "deepfashion512"]:
-        dataset = KeypointDataset(opt)
+        dataset = KeypointParsingDataset(opt)
     return dataset
 
 
