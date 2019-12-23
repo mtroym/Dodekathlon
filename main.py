@@ -31,18 +31,18 @@ if __name__ == '__main__':
     # gmm = GMM(opt).cuda()
     # x = gmm(inputA, inputB)
 
-    from models.GMM import CTPSGenerator
-    gen = CTPSGenerator(opt)
+    # from models.GMM import CTPSGenerator
+    # gen = CTPSGenerator(opt)
+    #
+    # if len(opt.gpu_ids):
+    #     gen = gen.cuda()
+    #
+    # for i, data in enumerate(dataloader):
+    #
+    #     warped_pyrs, out_img = gen(data)
+    #     print(out_img.size())
+    #     break
 
-    if len(opt.gpu_ids):
-        gen = gen.cuda()
-
-    for i, data in enumerate(dataloader):
-
-        warped_pyrs, out_img = gen(data)
-        print(out_img.size())
-        break
-    '''
     visualizer = Visualizer(opt)
     saver = Saver(opt)
     saver.latest()
@@ -52,7 +52,8 @@ if __name__ == '__main__':
 
         for i, data in enumerate(dataloader):
             iter_start_time = time.time()
-            vis = model.train_batch(inputs=data, loss=loss, metrics=metrics)
+            res = model.train_batch(inputs=data, loss=loss, metrics=metrics)
+            print(res["scalar"]["loss_NN"])
             # visualizer.display_current_results(vis, epoch, save_result=True)
         #
         # for i, data in enumerate(dataloader_val):
@@ -92,4 +93,3 @@ if __name__ == '__main__':
     #     print('End of epoch %d / %d \t Time Taken: %d sec' %
     #           (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
     #     model.update_learning_rate()
-    '''

@@ -5,7 +5,10 @@ from torch.nn import init
 import numpy as np
 import torch.nn.functional as F
 import torchvision.models as models
-
+from .blocks import ResnetDiscriminator
+from .helpers import get_norm_layer, get_scheduler
+import os
+import cv2
 
 def weights_init_normal(m):
     classname = m.__class__.__name__
@@ -286,7 +289,7 @@ class GMM(nn.Module):
         self.l2norm = FeatureL2Norm()
         self.correlation = FeatureCorrelation()
         self.regression = FeatureRegression(input_nc=256 // 4 ** scale_factor, output_dim=2 * opt.grid_size ** 2, use_cuda=True, scale_factor=scale_factor)
-        self.gridGen = TpsGridGen(256 // 2 ** scale_factor, 192 // 2 ** scale_factor, use_cuda=True, grid_size=opt.grid_size)
+        self.gridGen = TpsGridGen(256 // 2 ** scale_factor, 256 // 2 ** scale_factor, use_cuda=True, grid_size=opt.grid_size)
 
     def forward(self, inputA, inputB):
         featureA = self.extractionA(inputA)
@@ -476,25 +479,91 @@ class CTPSGenerator(nn.Module):
             warped_src = self.warp_feats(self.gmm_pyrs[i], source_parsing_pyrs[i], source_kp_pyrs[i],
                                          target_parsing_pyrs[i], target_kp_pyrs[i], feat_pyrs[i])
             warped_pyrs.append(warped_src)
-            print('feat_pyr size: ', feat_pyrs[i].size())
-            print('warped_src size: ', warped_src.size())
+            # print('feat_pyr size: ', feat_pyrs[i].size())
+            # print('warped_src size: ', warped_src.size())
         # synthesize target image
         pred_trg = self.synthesis_net(warped_pyrs)
 
         return warped_pyrs, pred_trg
 
+class CTPSDiscriminator(nn.Module):
+    def __init__(self, opt, init_type='normal', norm="instance", dropout=0.5,
+                 n_downsmapling=2, use_sigmoid=False, num_blocks=3):
+        super(CTPSDiscriminator, self).__init__()
+        self.opt = opt
+        self.gpu_ids = self.opt.gpu_ids
+        self.input_nc = (3 + self.opt.keypoint) * 2
+        self.norm_layer = get_norm_layer(norm)
+
+        self.discr = ResnetDiscriminator(self.input_nc, self.opt.hidden,
+                                         norm_layer=self.norm_layer, use_dropout=dropout,
+                                         use_sigmoid=use_sigmoid, n_blocks=num_blocks,
+                                         padding_type='reflect', n_downsampling=n_downsmapling)
+        if len(self.gpu_ids):
+            self.discr = self.discr.cuda()
+
+        if not self.opt.resume:
+            init_weights(self.discr, init_type)
+
+    def forward(self, inputs: dict, target):
+        outputs = {}
+        source = inputs["Source"]
+        source_kp = inputs["SourceKP"]
+        target_kp = inputs["TargetKP"]
+
+        if len(self.opt.gpu_ids):
+            source, target, source_kp, target_kp = \
+                list(map(lambda x: x.cuda(), [source, target, source_kp, target_kp]))
+
+        outputs["Pred"] = self.discr(torch.cat([source, source_kp, target, target_kp], dim=1))
+        return outputs
+
+def make_vis(pred_target, inputs):
+    fake = (pred_target.detach().cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
+    gt = (inputs["Target"].numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
+    src = (inputs["Source"].numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
+    total = np.concatenate([fake, gt, src], 2)
+    cv2.imwrite("test.png", total[0])
 
 class CTPSModel:
     def __init__(self, opt):
+        self.name = 'CTPS'
         self.opt = opt
+        self.gpu_ids = opt.gpu_ids if opt.gpu_ids else []
         self.gener: CTPSGenerator = CTPSGenerator(opt)
-        self.optimizer_G = [torch.optim.Adam(filter(lambda p: p.requires_grad, \
+        self.discr: CTPSDiscriminator = CTPSDiscriminator(opt)
+        self.optimizer_G = torch.optim.Adam(filter(lambda p: p.requires_grad,
                                                     self.gener.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999),
-                                             eps=1e-08, weight_decay=1e-5)]
+                                                    eps=1e-08, weight_decay=1e-5)
+        self.optimizer_D = torch.optim.Adam(self.discr.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+
+        self.schedulars_D = get_scheduler(self.optimizer_D, opt)
+        self.schedular_G = get_scheduler(self.optimizer_G, opt)
+        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+
+    def cuda(self):
+        self.discr = self.discr.cuda()
+        self.gener = self.gener.cuda()
 
     def train_batch(self, inputs: dict, loss: dict, metrics: dict) -> dict:
-        pass
+        loss_accum = {}
 
+        gt_target = inputs["Target"]
+        if len(self.gpu_ids):
+            gt_target = gt_target.cuda()
+            self.cuda()
+        import pdb; pdb.set_trace();
+
+        _, pred_target = self.gener(inputs)
+        self.optimizer_G.zero_grad()
+        loss_accum["loss_NN"] = loss["nn_loss"](pred_target, gt_target)
+
+        loss_bk = loss_accum["loss_NN"]
+        loss_bk.backward()
+        self.optimizer_G.step()
+
+        vis = make_vis(pred_target, inputs)
+        return {"visuals": vis, "scalar": loss_accum}
 
 if __name__ == '__main__':
     gmm = GMM()

@@ -1,6 +1,6 @@
 from models.base import BaseModel
 from models.PATN import PATNTransferModel
-
+from models.GMM import CTPSModel
 
 def create_model(opt):
     model = BaseModel(opt)
@@ -8,6 +8,8 @@ def create_model(opt):
         pass
     elif opt.model == 'PATN':
         model = PATNTransferModel(opt)
+    elif opt.model == 'CTPS':
+        model = CTPSModel(opt)
     else:
         raise ValueError("Model [%s] not recognized." % opt.model)
 

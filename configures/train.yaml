@@ -2,7 +2,7 @@ train_settings:
     lr: !!float 0.001
     optimizer: Adam
     dataset: deepfashion256
-    model: PATN
+    model: CTPS
     epochs: !!int 32
     isTrain: TRUE
     load_size: 256
@@ -19,7 +19,8 @@ train_settings:
     pyramid_num: 3
     loss:
         gan_loss: [0.0, MSE]
-        l1_loss: [1.0, L1]
+        l1_loss: [0.0, L1]
+        nn_loss: [0.01, NNL]
 
 test_settings:
     inference: TRUE
