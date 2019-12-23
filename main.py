@@ -24,6 +24,25 @@ def init_all():
 
 if __name__ == '__main__':
     opt, dataloader, model, loss, metrics = init_all()
+    # from models.GMM import GMM
+    # import torch
+    # inputA, inputB = torch.ones(1, 37, 256, 256), torch.ones(1, 37, 256, 256)
+    # inputA, inputB = inputA.cuda(), inputB.cuda()
+    # gmm = GMM(opt).cuda()
+    # x = gmm(inputA, inputB)
+
+    from models.GMM import CTPSGenerator
+    gen = CTPSGenerator(opt)
+
+    if len(opt.gpu_ids):
+        gen = gen.cuda()
+
+    for i, data in enumerate(dataloader):
+
+        warped_pyrs, out_img = gen(data)
+        print(out_img.size())
+        break
+    '''
     visualizer = Visualizer(opt)
     saver = Saver(opt)
     saver.latest()
@@ -73,3 +92,4 @@ if __name__ == '__main__':
     #     print('End of epoch %d / %d \t Time Taken: %d sec' %
     #           (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
     #     model.update_learning_rate()
+    '''
