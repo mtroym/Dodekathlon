@@ -305,7 +305,7 @@ class GMM(nn.Module):
 
 
 class SynthesisNet(nn.Module):
-    def __init__(self, opt, pyramid_layer_nums=[19, 19, 19]):
+    def __init__(self, opt, pyramid_layer_nums=[67, 128, 256]):
         super(SynthesisNet, self).__init__()
         self.opt = opt
 
@@ -428,14 +428,16 @@ class CTPSGenerator(nn.Module):
             target_input_i = torch.cat([target_kp, target_parsing * target_parsing_mask], dim=1)
 
             grid_i, theta_i = GMMNet(source_input_i, target_input_i)
-            warped_source_i = F.grid_sample(source[:, i:i + 1, :, :] * source_parsing[:, i:i + 1, :, :], grid_i,
+            # print("grid_i size: ", grid_i.size(), "theta_i size: ", theta_i.size(), "source * source_parsing size: ", (source * source_parsing[:, i:i+1, :, :]).size())
+            warped_source_i = F.grid_sample(source * source_parsing[:, i:i + 1, :, :], grid_i,
                                             padding_mode='border')
+            # print("warped_source_i size: ", warped_source_i.size())
             warped_sources.append(warped_source_i)
 
-        warped_sources_stack = torch.cat(warped_sources, dim=1)
-        # warped_res, _ = torch.max(warped_sources_stack, dim=1, keepdim=True)
+        warped_sources_stack = torch.stack(warped_sources, dim=0)
+        warped_res, _ = torch.max(warped_sources_stack, dim=0)
 
-        return warped_sources_stack
+        return warped_res
 
     def forward(self, inputs: dict):
         source = inputs["Source"]
@@ -463,6 +465,7 @@ class CTPSGenerator(nn.Module):
             target_kp_pyrs.append(tmp_tk)
         # print("len target_parsing_pyrs: ", len(target_parsing_pyrs))
         # print("len target_kp_pyrs: ", len(target_kp_pyrs))
+
         # feature extraction
         feat_pyrs = self.feat_extract(source)
         # print("len feat_pyrs: ", len(feat_pyrs))
@@ -473,8 +476,8 @@ class CTPSGenerator(nn.Module):
             warped_src = self.warp_feats(self.gmm_pyrs[i], source_parsing_pyrs[i], source_kp_pyrs[i],
                                          target_parsing_pyrs[i], target_kp_pyrs[i], feat_pyrs[i])
             warped_pyrs.append(warped_src)
-            # print('feat_pyr size: ', feat_pyrs[i].size())
-            # print('warped_src size: ', warped_src.size())
+            print('feat_pyr size: ', feat_pyrs[i].size())
+            print('warped_src size: ', warped_src.size())
         # synthesize target image
         pred_trg = self.synthesis_net(warped_pyrs)
 
