@@ -521,20 +521,29 @@ def make_vis(pred_target, warped_parsing_pyrs, target_parsing_pyrs, inputs):
         warped_parsing[:, cur_sematic:cur_sematic+1, :, :], \
         target_parsing[:, cur_sematic:cur_sematic+1, :, :], \
         source_parsing[:, cur_sematic:cur_sematic+1, :, :]
-    # import pdb; pdb.set_trace();
+
+    # show the warped result
     warped_parsing_i = (warped_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
     target_parsing_i = (target_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
     source_parsing_i = (source_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255
-    warped_vis = np.concatenate([warped_parsing_i, target_parsing_i, source_parsing_i], 2)
+    warped_cat = np.concatenate([warped_parsing_i, target_parsing_i, source_parsing_i], 2)
+    warped_cat = np.concatenate([warped_cat,]*3, 3)
 
-    cv2.imwrite("warped.png", warped_vis[0, :, :, 0])
-    # import pdb; pdb.set_trace();
-
+    # show the image result
     fake = (pred_target.detach().cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
     gt = (inputs["Target"].cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
     src = (inputs["Source"].cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
-    total = np.concatenate([fake, gt, src], 2)
+    img_cat = np.concatenate([fake, gt, src], 2)
 
+    # show the pose result
+    source_kp, target_kp = inputs["SourceKP"], inputs["TargetKP"]
+    source_kp, target_kp = torch.sum(source_kp, dim=1, keepdim=True), torch.sum(target_kp, dim=1, keepdim=True)
+    source_kp = (source_kp.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
+    target_kp = (target_kp.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
+    kp_cat = np.concatenate([source_kp, target_kp, source_kp], 2)
+    kp_cat = np.concatenate([kp_cat, ]*3, 3)
+
+    total = np.concatenate([img_cat, warped_cat, kp_cat], 1)
     cv2.imwrite("test.png", total[0])
 
 class CTPSModel:

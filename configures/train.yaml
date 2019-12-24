@@ -13,7 +13,7 @@ train_settings:
     hidden: 16
     beta1: 0.1
     lr_policy: plateau
-    grid_size: 5
+    grid_size: 3
     semantic: 20
     keypoint: 18
     pyramid_num: 2

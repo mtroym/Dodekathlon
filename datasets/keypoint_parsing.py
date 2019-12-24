@@ -138,7 +138,7 @@ class KeypointParsingDataset:
         pair = self.pairs[idx]
         (src, src_kp, src_sem), (trg, trg_kp, trg_sem) = self._get_one(pair[0]), self._get_one(pair[1])
         src, trg = self.preprocess(src), self.preprocess(trg)
-        src_kp, trg_kp = src_kp.to_dense().float(), src_kp.to_dense().float()
+        src_kp, trg_kp = src_kp.to_dense().float(), trg_kp.to_dense().float()
         src_kp, trg_kp = src_kp.permute([-1, 0, 1]), trg_kp.permute([-1, 0, 1])
         blob = self._get_blob(src, src_kp, src_sem, trg, trg_kp, trg_sem)
         return blob
