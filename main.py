@@ -53,7 +53,7 @@ if __name__ == '__main__':
         for i, data in enumerate(dataloader):
             iter_start_time = time.time()
             res = model.train_batch(inputs=data, loss=loss, metrics=metrics)
-            print(res["scalar"]["loss_NN"])
+            print("loss NN :", res["loss_NN"], " loss IOU : ", res["loss_IOU"])
             # visualizer.display_current_results(vis, epoch, save_result=True)
         #
         # for i, data in enumerate(dataloader_val):

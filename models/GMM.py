@@ -296,14 +296,9 @@ class GMM(nn.Module):
         featureB = self.extractionB(inputB)
         featureA = self.l2norm(featureA)
         featureB = self.l2norm(featureB)
-        # print('featureA size: ', featureA.size())
-        # print('featureB size: ', featureB.size())
         correlation = self.correlation(featureA, featureB)
-        # print('correlation size: ', correlation.size())
         theta = self.regression(correlation)
-        # print('theta size: ', theta.size())
         grid = self.gridGen(theta)
-        # print('grid_size: ', grid.size())
         return grid, theta
 
 
@@ -333,13 +328,12 @@ class SynthesisNet(nn.Module):
 
 
     def forward(self, warped_pyrs):
-        # res_pyrs = []
+        # fusion the warped pyramids features
         last_f = warped_pyrs[-1]
         for f, net_module in zip(warped_pyrs[::-1][1:], self.conv_nets):
-            # print("f size: ", f.size(), "last_f size: ", last_f.size())
             small_last_f = net_module(last_f)
             last_f = torch.cat([F.interpolate(small_last_f, scale_factor=2, mode='bilinear'), f], dim=1)
-            # res_pyrs.append(last_f)
+
         res_img = self.img_syn(last_f)
         return res_img
 
@@ -420,7 +414,7 @@ class CTPSGenerator(nn.Module):
 
     def warp_feats(self, GMMNet, source_parsing, source_kp, target_parsing, target_kp, source):
         # warp image and vgg features based on computed TPS layer, remember to keep size same
-        warped_sources = []
+        warped_sources, warped_masks = [], [target_parsing[:, 0:1, :, :],] # take the target mask to ignore the background diff loss
         for i in range(1, self.semantic):
             source_parsing_mask = torch.zeros_like(source_parsing).to(source_parsing)
             source_parsing_mask[:, i:i + 1, :, :] = 1
@@ -434,13 +428,15 @@ class CTPSGenerator(nn.Module):
             # print("grid_i size: ", grid_i.size(), "theta_i size: ", theta_i.size(), "source * source_parsing size: ", (source * source_parsing[:, i:i+1, :, :]).size())
             warped_source_i = F.grid_sample(source * source_parsing[:, i:i + 1, :, :], grid_i,
                                             padding_mode='border')
+            warped_mask_i = F.grid_sample(source_parsing[:, i:i+1, :, :], grid_i, mode='nearest', padding_mode='border')
             # print("warped_source_i size: ", warped_source_i.size())
             warped_sources.append(warped_source_i)
+            warped_masks.append(warped_mask_i)
 
         warped_sources_stack = torch.stack(warped_sources, dim=0)
         warped_res, _ = torch.max(warped_sources_stack, dim=0)
-
-        return warped_res
+        warped_masks_stack = torch.stack(warped_masks, dim=0)
+        return warped_res, warped_masks_stack
 
     def forward(self, inputs: dict):
         source = inputs["Source"]
@@ -466,25 +462,22 @@ class CTPSGenerator(nn.Module):
             source_kp_pyrs.append(tmp_sk)
             target_parsing_pyrs.append(tmp_tp)
             target_kp_pyrs.append(tmp_tk)
-        # print("len target_parsing_pyrs: ", len(target_parsing_pyrs))
-        # print("len target_kp_pyrs: ", len(target_kp_pyrs))
 
         # feature extraction
         feat_pyrs = self.feat_extract(source)
-        # print("len feat_pyrs: ", len(feat_pyrs))
 
         # construct warped pyramids based on learned TPS pyramids
-        warped_pyrs = []
+        warped_src_pyrs, warped_parsing_pyrs = [], []
         for i in range(self.opt.pyramid_num):
-            warped_src = self.warp_feats(self.gmm_pyrs[i], source_parsing_pyrs[i], source_kp_pyrs[i],
+            warped_src, warped_parsing = self.warp_feats(self.gmm_pyrs[i], source_parsing_pyrs[i], source_kp_pyrs[i],
                                          target_parsing_pyrs[i], target_kp_pyrs[i], feat_pyrs[i])
-            warped_pyrs.append(warped_src)
-            # print('feat_pyr size: ', feat_pyrs[i].size())
-            # print('warped_src size: ', warped_src.size())
-        # synthesize target image
-        pred_trg = self.synthesis_net(warped_pyrs)
+            warped_src_pyrs.append(warped_src)
+            warped_parsing_pyrs.append(warped_parsing)
 
-        return warped_pyrs, pred_trg
+        # synthesize target image
+        pred_trg = self.synthesis_net(warped_src_pyrs)
+
+        return warped_parsing_pyrs, target_parsing_pyrs, pred_trg
 
 class CTPSDiscriminator(nn.Module):
     def __init__(self, opt, init_type='normal', norm="instance", dropout=0.5,
@@ -552,18 +545,17 @@ class CTPSModel:
         if len(self.gpu_ids):
             gt_target = gt_target.cuda()
             self.cuda()
-        import pdb; pdb.set_trace();
 
-        _, pred_target = self.gener(inputs)
+        warped_parsing_pyrs, target_parsing_pyrs, pred_target = self.gener(inputs)
         self.optimizer_G.zero_grad()
         loss_accum["loss_NN"] = loss["nn_loss"](pred_target, gt_target)
-
-        loss_bk = loss_accum["loss_NN"]
+        loss_accum["loss_IOU"] = loss["iou_loss"](warped_parsing_pyrs, target_parsing_pyrs)
+        loss_bk = loss_accum["loss_NN"] + loss_accum["loss_IOU"]
         loss_bk.backward()
         self.optimizer_G.step()
 
-        vis = make_vis(pred_target, inputs)
-        return {"visuals": vis, "scalar": loss_accum}
+        make_vis(pred_target, inputs)
+        return loss_accum
 
 if __name__ == '__main__':
     gmm = GMM()

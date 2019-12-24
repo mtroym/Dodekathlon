@@ -2,6 +2,27 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
+class IOULoss(nn.Module):
+    '''
+    IOU Loss: encourage warped feature to overlap target feature as well as possible
+    '''
+    def __init__(self):
+        super(IOULoss, self).__init__()
+        self.SMOOTH = 1e-6
+
+    def iou(self, outputs, labels):
+        outputs, labels = outputs.int(), labels.int()
+        intersection = (outputs & labels).float().sum((1, 2, 3))
+        union = (outputs | labels).float().sum((1, 2, 3))
+        iou = (intersection + self.SMOOTH) / (union + self.SMOOTH)
+        return iou.mean()
+
+    def forward(self, warped_parsing_pyrs, target_parsing_pyrs):
+        res_loss = 0.
+        for (warped_parsing, target_parsing) in zip(warped_parsing_pyrs, target_parsing_pyrs):
+            res_loss += self.iou(warped_parsing, target_parsing)
+        return res_loss
+
 class NNLoss(nn.Module):
     '''
     Unofficial Implementation of Nearest Neighbor Loss in paper "Deformable GANs for Pose-based Human Image Generation"
@@ -37,7 +58,8 @@ loss_dict = {
     "MSE": nn.MSELoss(),
     "BCE": nn.BCELoss(),
     "L1" : nn.L1Loss(),
-    "NNL": NNLoss()
+    "NNL": NNLoss(),
+    "IOU": IOULoss(),
 }
 
 def create_loss_single(lamda, loss):
