@@ -10,7 +10,7 @@ def create_dataset(opt):
     if opt.dataset == 'Base':
         dataset = BaseDataset()
     elif opt.dataset in ["deepfashion256", "market1501", "deepfashion512"]:
-        dataset = KeypointParsingDataset(opt)
+        dataset = KeypointDataset(opt)
     return dataset
 
 
