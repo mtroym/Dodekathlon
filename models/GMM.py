@@ -121,7 +121,7 @@ class FeatureRegression(nn.Module):
         )
         self.linear = nn.Linear(1024 // 4 ** scale_factor, output_dim)
         self.tanh = nn.Tanh()
-        if use_cuda:
+        if use_cuda and torch.cuda.is_available():
             self.conv.cuda()
             self.linear.cuda()
             self.tanh.cuda()
@@ -149,7 +149,7 @@ class TpsGridGen(nn.Module):
         # grid_X,grid_Y: size [1,H,W,1,1]
         self.grid_X = torch.FloatTensor(self.grid_X).unsqueeze(0).unsqueeze(3)
         self.grid_Y = torch.FloatTensor(self.grid_Y).unsqueeze(0).unsqueeze(3)
-        if use_cuda:
+        if use_cuda and torch.cuda.is_available():
             self.grid_X = self.grid_X.cuda()
             self.grid_Y = self.grid_Y.cuda()
 
@@ -167,7 +167,7 @@ class TpsGridGen(nn.Module):
             self.Li = self.compute_L_inverse(P_X, P_Y).unsqueeze(0)
             self.P_X = P_X.unsqueeze(2).unsqueeze(3).unsqueeze(4).transpose(0, 4)
             self.P_Y = P_Y.unsqueeze(2).unsqueeze(3).unsqueeze(4).transpose(0, 4)
-            if use_cuda:
+            if use_cuda and torch.cuda.is_available():
                 self.P_X = self.P_X.cuda()
                 self.P_Y = self.P_Y.cuda()
                 self.P_X_base = self.P_X_base.cuda()
@@ -192,7 +192,7 @@ class TpsGridGen(nn.Module):
         P = torch.cat((O, X, Y), 1)
         L = torch.cat((torch.cat((K, P), 1), torch.cat((P.transpose(0, 1), Z), 1)), 0)
         Li = torch.inverse(L)
-        if self.use_cuda:
+        if self.use_cuda and torch.cuda.is_available():
             Li = Li.cuda()
         return Li
 
@@ -320,13 +320,13 @@ class SynthesisNet(nn.Module):
                 nn.BatchNorm2d(self.feat_nums[i]),
                 nn.ReLU(inplace=True)
             )
-            if len(opt.gpu_ids):
+            if len(opt.gpu_ids) and torch.cuda.is_available():
                 cur_module = cur_module.cuda()
             self.conv_nets.append(cur_module)
 
         self.img_syn = nn.Sequential(nn.Conv2d(pyramid_layer_nums[0] + self.feat_nums[0], 3, kernel_size=3, stride=1, padding=1))
 
-        if len(opt.gpu_ids):
+        if len(opt.gpu_ids) and torch.cuda.is_available():
             self.img_syn = self.img_syn.cuda()
 
 
@@ -362,13 +362,13 @@ class CTPSGenerator(nn.Module):
         self.gmm_pyrs = []
         for i in range(self.opt.pyramid_num):
             gmm = GMM(opt, scale_factor)
-            if len(opt.gpu_ids):
+            if len(opt.gpu_ids) and torch.cuda.is_available():
                 gmm = gmm.cuda()
             self.gmm_pyrs.append(gmm)
             scale_factor += 1
 
         self.synthesis_net = SynthesisNet(opt)
-        if len(opt.gpu_ids):
+        if len(opt.gpu_ids) and torch.cuda.is_available():
             self.synthesis_net = self.synthesis_net.cuda()
 
     def feat_extract(self, img, layers=[3, 8, 13]):
@@ -446,7 +446,7 @@ class CTPSGenerator(nn.Module):
         source_parsing = inputs["SourceParsing"]
         target_parsing = inputs["TargetParsing"]
 
-        if len(self.opt.gpu_ids):
+        if len(self.opt.gpu_ids) and torch.cuda.is_available():
             source, source_kp, target_kp, source_parsing, target_parsing = \
                 list(map(lambda x: x.cuda(), [source, source_kp, target_kp, source_parsing, target_parsing]))
 
@@ -493,7 +493,7 @@ class CTPSDiscriminator(nn.Module):
                                          norm_layer=self.norm_layer, use_dropout=dropout,
                                          use_sigmoid=use_sigmoid, n_blocks=num_blocks,
                                          padding_type='reflect', n_downsampling=n_downsmapling)
-        if len(self.gpu_ids):
+        if len(self.gpu_ids) and torch.cuda.is_available():
             self.discr = self.discr.cuda()
 
         if not self.opt.resume:
@@ -570,7 +570,7 @@ class CTPSModel:
         loss_accum = {}
 
         gt_target = inputs["Target"]
-        if len(self.gpu_ids):
+        if len(self.gpu_ids) and torch.cuda.is_available():
             gt_target = gt_target.cuda()
             self.cuda()
 
