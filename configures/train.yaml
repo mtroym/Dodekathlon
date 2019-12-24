@@ -16,11 +16,11 @@ train_settings:
     grid_size: 5
     semantic: 20
     keypoint: 18
-    pyramid_num: 3
+    pyramid_num: 2
     loss:
         gan_loss: [0.0, MSE]
-        l1_loss: [0.0, L1]
+        l1_loss: [1.0, L1]
         nn_loss: [0.01, NNL]
-        iou_loss: [-1.0, IOU]
+        iou_loss: [-1000, IOU]
 test_settings:
     inference: TRUE

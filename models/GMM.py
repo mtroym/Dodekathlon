@@ -425,11 +425,9 @@ class CTPSGenerator(nn.Module):
             target_input_i = torch.cat([target_kp, target_parsing * target_parsing_mask], dim=1)
 
             grid_i, theta_i = GMMNet(source_input_i, target_input_i)
-            # print("grid_i size: ", grid_i.size(), "theta_i size: ", theta_i.size(), "source * source_parsing size: ", (source * source_parsing[:, i:i+1, :, :]).size())
             warped_source_i = F.grid_sample(source * source_parsing[:, i:i + 1, :, :], grid_i,
                                             padding_mode='border')
             warped_mask_i = F.grid_sample(source_parsing[:, i:i+1, :, :], grid_i, mode='nearest', padding_mode='border')
-            # print("warped_source_i size: ", warped_source_i.size())
             warped_sources.append(warped_source_i)
             warped_masks.append(warped_mask_i)
 
@@ -550,7 +548,8 @@ class CTPSModel:
         self.optimizer_G.zero_grad()
         loss_accum["loss_NN"] = loss["nn_loss"](pred_target, gt_target)
         loss_accum["loss_IOU"] = loss["iou_loss"](warped_parsing_pyrs, target_parsing_pyrs)
-        loss_bk = loss_accum["loss_NN"] + loss_accum["loss_IOU"]
+        loss_accum["loss_L1"] = loss["l1_loss"](pred_target, gt_target)
+        loss_bk = loss_accum["loss_NN"] + loss_accum["loss_IOU"] + loss_accum["loss_L1"]
         loss_bk.backward()
         self.optimizer_G.step()
 

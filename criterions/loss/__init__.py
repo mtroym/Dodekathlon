@@ -11,9 +11,8 @@ class IOULoss(nn.Module):
         self.SMOOTH = 1e-6
 
     def iou(self, outputs, labels):
-        outputs, labels = outputs.int(), labels.int()
-        intersection = (outputs & labels).float().sum((1, 2, 3))
-        union = (outputs | labels).float().sum((1, 2, 3))
+        intersection = (outputs * labels).sum((1, 2, 3))
+        union = (torch.max(outputs, labels)).sum((1, 2, 3))
         iou = (intersection + self.SMOOTH) / (union + self.SMOOTH)
         return iou.mean()
 
