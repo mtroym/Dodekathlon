@@ -314,9 +314,12 @@ class SynthesisNet(nn.Module):
         for i in range(self.opt.pyramid_num - 2, -1, -1):
             cur_module = nn.Sequential(
                 nn.Conv2d(pyramid_layer_nums[i+1] + self.feat_nums[i+1], self.feat_nums[i], kernel_size=3, stride=1, padding=1),
-                # nn.Conv2d(pyramid_layer_nums[i], self.feat_nums[i], kernel_size=3, stride=1, padding=1),
                 nn.BatchNorm2d(self.feat_nums[i]),
-                nn.ReLU(inplace=True))
+                nn.ReLU(inplace=True),
+                nn.Conv2d(self.feat_nums[i], self.feat_nums[i], kernel_size=3, stride=1,padding=1),
+                nn.BatchNorm2d(self.feat_nums[i]),
+                nn.ReLU(inplace=True)
+            )
             if len(opt.gpu_ids):
                 cur_module = cur_module.cuda()
             self.conv_nets.append(cur_module)
@@ -509,10 +512,18 @@ class CTPSDiscriminator(nn.Module):
         outputs["Pred"] = self.discr(torch.cat([source, source_kp, target, target_kp], dim=1))
         return outputs
 
-def make_vis(pred_target, inputs):
+def make_vis(pred_target, warped_parsing_pyrs, target_parsing_pyrs, inputs):
+    warped_parsing, target_parsing = warped_parsing_pyrs[0], target_parsing_pyrs[0]
+    # source_parsing = inputs[""]
+
+    import random; cur_sematic = random.choice(range(1, 20))
+    warped_parsing_i, target_parsing_i = warped_parsing[:, cur_sematic:cur_sematic+1, :, :], target_parsing[:, cur_sematic:cur_sematic+1, :, :]
+    warped_parsing_i = (warped_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
+    target_parsing_i = (target_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
+
     fake = (pred_target.detach().cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
-    gt = (inputs["Target"].numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
-    src = (inputs["Source"].numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
+    gt = (inputs["Target"].cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
+    src = (inputs["Source"].cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
     total = np.concatenate([fake, gt, src], 2)
     cv2.imwrite("test.png", total[0])
 
@@ -553,7 +564,7 @@ class CTPSModel:
         loss_bk.backward()
         self.optimizer_G.step()
 
-        make_vis(pred_target, inputs)
+        make_vis(pred_target, warped_parsing_pyrs, target_parsing_pyrs, inputs)
         return loss_accum
 
 if __name__ == '__main__':

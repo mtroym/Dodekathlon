@@ -19,8 +19,8 @@ train_settings:
     pyramid_num: 2
     loss:
         gan_loss: [0.0, MSE]
-        l1_loss: [1.0, L1]
-        nn_loss: [0.01, NNL]
+        l1_loss: [0.0, L1]
+        nn_loss: [0.00, NNL]
         iou_loss: [-1000, IOU]
 test_settings:
     inference: TRUE
