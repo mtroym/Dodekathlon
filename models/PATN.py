@@ -253,7 +253,8 @@ class PATNTransferModel:
 
     def train_batch(self, inputs: dict, loss: dict, metrics: dict) -> dict:
         loss_accum = {}
-        print(inputs["TargetParsing"].shape)
+        if "TargetParsing" in inputs:
+            print(inputs["TargetParsing"].shape)
         # D:
         fake_out = self.gener(inputs)  # {"FakeImage": ...}
         self.optimizer_G.zero_grad()
