@@ -436,7 +436,7 @@ class CTPSGenerator(nn.Module):
 
         warped_sources_stack = torch.stack(warped_sources, dim=0)
         warped_res, _ = torch.max(warped_sources_stack, dim=0)
-        warped_masks_stack = torch.stack(warped_masks, dim=0)
+        warped_masks_stack = torch.cat(warped_masks, dim=1)
         return warped_res, warped_masks_stack
 
     def forward(self, inputs: dict):
@@ -514,17 +514,27 @@ class CTPSDiscriminator(nn.Module):
 
 def make_vis(pred_target, warped_parsing_pyrs, target_parsing_pyrs, inputs):
     warped_parsing, target_parsing = warped_parsing_pyrs[0], target_parsing_pyrs[0]
-    # source_parsing = inputs[""]
+    source_parsing = inputs["SourceParsing"]
 
     import random; cur_sematic = random.choice(range(1, 20))
-    warped_parsing_i, target_parsing_i = warped_parsing[:, cur_sematic:cur_sematic+1, :, :], target_parsing[:, cur_sematic:cur_sematic+1, :, :]
+    warped_parsing_i, target_parsing_i, source_parsing_i =\
+        warped_parsing[:, cur_sematic:cur_sematic+1, :, :], \
+        target_parsing[:, cur_sematic:cur_sematic+1, :, :], \
+        source_parsing[:, cur_sematic:cur_sematic+1, :, :]
+    # import pdb; pdb.set_trace();
     warped_parsing_i = (warped_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
     target_parsing_i = (target_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
+    source_parsing_i = (source_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255
+    warped_vis = np.concatenate([warped_parsing_i, target_parsing_i, source_parsing_i], 2)
+
+    cv2.imwrite("warped.png", warped_vis[0, :, :, 0])
+    # import pdb; pdb.set_trace();
 
     fake = (pred_target.detach().cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
     gt = (inputs["Target"].cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
     src = (inputs["Source"].cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
     total = np.concatenate([fake, gt, src], 2)
+
     cv2.imwrite("test.png", total[0])
 
 class CTPSModel:
