@@ -13,7 +13,7 @@ class IOULoss(nn.Module):
     def iou(self, outputs, labels):
         intersection = (outputs * labels).sum((1, 2, 3))
         union = (torch.max(outputs, labels)).sum((1, 2, 3))
-        iou = (intersection + self.SMOOTH) / (union + self.SMOOTH)
+        iou = (intersection + self.SMOOTH) #/ (union + self.SMOOTH)
         return iou.mean()
 
     def forward(self, warped_parsing_pyrs, target_parsing_pyrs):

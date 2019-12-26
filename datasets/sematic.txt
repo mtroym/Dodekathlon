@@ -1,0 +1,19 @@
+1. hat
+2. hair
+3. NAN
+4. NAN
+5. jacket
+6. dress
+7. sweater jacket
+8. socket
+9. trousers
+10. NAN
+11. NAN
+12. short skirt
+13. face
+14. left arm
+15. right arm
+16. left leg
+17. right leg
+18. left shoe
+19. right shoe

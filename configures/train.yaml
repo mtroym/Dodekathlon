@@ -13,10 +13,12 @@ train_settings:
     hidden: 16
     beta1: 0.1
     lr_policy: plateau
-    grid_size: 3
+    grid_size: 5
     semantic: 20
     keypoint: 18
     pyramid_num: 2
+    span_range: 0.9
+    norm: 'in'
     loss:
         gan_loss: [0.0, MSE]
         l1_loss: [1.0, L1]

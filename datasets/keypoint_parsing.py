@@ -140,6 +140,7 @@ class KeypointParsingDataset:
         src, trg = self.preprocess(src), self.preprocess(trg)
         src_kp, trg_kp = src_kp.to_dense().float(), trg_kp.to_dense().float()
         src_kp, trg_kp = src_kp.permute([-1, 0, 1]), trg_kp.permute([-1, 0, 1])
+        src_kp, trg_kp = self.dilation(src_kp), self.dilation(trg_kp)
         blob = self._get_blob(src, src_kp, src_sem, trg, trg_kp, trg_sem)
         return blob
 
@@ -161,6 +162,15 @@ class KeypointParsingDataset:
         tensor = torch.sparse_coo_tensor(indices_list, valu, size=(self.h, self.w, self.num_kp))
         return tensor
 
+    def dilation(self, tensor, kernel_size=[5,5]):
+        '''
+        :param tensor:
+        :param kernel_size = 5:
+        :return:
+        '''
+        max_op = torch.nn.MaxPool2d(kernel_size=kernel_size, stride=(1,1), padding=[(kernel_size[0]-1)//2, (kernel_size[1]-1)//2])
+        tensor = max_op(tensor.unsqueeze(0)).detach().squeeze(0)
+        return tensor
 
 if __name__ == '__main__':
     pass

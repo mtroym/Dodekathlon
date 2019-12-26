@@ -9,6 +9,8 @@ from .blocks import ResnetDiscriminator
 from .helpers import get_norm_layer, get_scheduler
 import os
 import cv2
+from utils.tps_grid_gen import TPSGridGen
+import itertools
 
 def weights_init_normal(m):
     classname = m.__class__.__name__
@@ -53,7 +55,6 @@ def init_weights(net, init_type='normal'):
         net.apply(weights_init_kaiming)
     else:
         raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
-
 
 class FeatureExtraction(nn.Module):
     def __init__(self, input_nc, ngf=64, n_layers=3, norm_layer=nn.BatchNorm2d, use_dropout=False):
@@ -103,20 +104,20 @@ class FeatureCorrelation(nn.Module):
 
 
 class FeatureRegression(nn.Module):
-    def __init__(self, input_nc=512, output_dim=6, use_cuda=False, scale_factor=1):
+    def __init__(self, input_nc=512, output_dim=6, use_cuda=False, scale_factor=1, norm_layer=nn.BatchNorm2d):
         super(FeatureRegression, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(input_nc, 512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
+            norm_layer(512),
             nn.ReLU(inplace=True),
             nn.Conv2d(512, 256, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(256),
+            norm_layer(256),
             nn.ReLU(inplace=True),
             nn.Conv2d(256, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
+            norm_layer(128),
             nn.ReLU(inplace=True),
             nn.Conv2d(128, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
+            norm_layer(64),
             nn.ReLU(inplace=True),
         )
         self.linear = nn.Linear(1024 // 4 ** scale_factor, output_dim)
@@ -282,10 +283,17 @@ class GMM(nn.Module):
     def __init__(self, opt, scale_factor):
         super(GMM, self).__init__()
         self.opt = opt
+        if self.opt == 'in':
+            norm_layer = nn.InstanceNorm2d
+        elif self.opt == 'bn':
+            norm_layer = nn.BatchNorm2d
+        else:
+            norm_layer = nn.BatchNorm2d
+
         self.extractionA = FeatureExtraction(self.opt.keypoint + self.opt.semantic, ngf=64, n_layers=3,
-                                             norm_layer=nn.BatchNorm2d)
+                                             norm_layer=norm_layer)
         self.extractionB = FeatureExtraction(self.opt.keypoint + self.opt.semantic, ngf=64, n_layers=3,
-                                             norm_layer=nn.BatchNorm2d)
+                                             norm_layer=norm_layer)
         self.l2norm = FeatureL2Norm()
         self.correlation = FeatureCorrelation()
         self.regression = FeatureRegression(input_nc=256 // 4 ** scale_factor, output_dim=2 * opt.grid_size ** 2, use_cuda=True, scale_factor=scale_factor)
@@ -307,6 +315,13 @@ class SynthesisNet(nn.Module):
         super(SynthesisNet, self).__init__()
         self.opt = opt
 
+        if self.opt.norm == 'in':
+            norm_layer = nn.InstanceNorm2d
+        elif self.opt.norm == 'bn':
+            norm_layer = nn.BatchNorm2d
+        else:
+            norm_layer = nn.BatchNorm2d
+
         self.feat_nums = [64, 64, 128, 256, 0, 0, 0, 0]
         self.conv_nets = []
 
@@ -314,10 +329,10 @@ class SynthesisNet(nn.Module):
         for i in range(self.opt.pyramid_num - 2, -1, -1):
             cur_module = nn.Sequential(
                 nn.Conv2d(pyramid_layer_nums[i+1] + self.feat_nums[i+1], self.feat_nums[i], kernel_size=3, stride=1, padding=1),
-                nn.BatchNorm2d(self.feat_nums[i]),
+                norm_layer(self.feat_nums[i]),
                 nn.ReLU(inplace=True),
                 nn.Conv2d(self.feat_nums[i], self.feat_nums[i], kernel_size=3, stride=1,padding=1),
-                nn.BatchNorm2d(self.feat_nums[i]),
+                norm_layer(self.feat_nums[i]),
                 nn.ReLU(inplace=True)
             )
             if len(opt.gpu_ids):
@@ -517,6 +532,7 @@ def make_vis(pred_target, warped_parsing_pyrs, target_parsing_pyrs, inputs):
     source_parsing = inputs["SourceParsing"]
 
     import random; cur_sematic = random.choice(range(1, 20))
+    cur_sematic = 11
     warped_parsing_i, target_parsing_i, source_parsing_i =\
         warped_parsing[:, cur_sematic:cur_sematic+1, :, :], \
         target_parsing[:, cur_sematic:cur_sematic+1, :, :], \
