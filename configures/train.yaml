@@ -1,28 +1,64 @@
 train_settings:
-    lr: !!float 0.001
+    lr: !!float 0.0002
     optimizer: Adam
     dataset: deepfashion256
-    model: CTPS
+    model: PTPS
     epochs: !!int 32
     isTrain: TRUE
     load_size: 256
     fine_size: 256
     refresh: FALSE
-    batchSize: 2
+    batchSize: 8
     dropout_rate: 0.5
     hidden: 16
-    beta1: 0.1
-    lr_policy: plateau
+    beta1: 0.5
+    lr_policy: multi_step
     grid_size: 5
     semantic: 20
     keypoint: 18
     pyramid_num: 2
     span_range: 0.9
     norm: 'in'
+    epoch_milestones: [500]
     loss:
         gan_loss: [0.0, MSE]
         l1_loss: [1.0, L1]
         nn_loss: [0.01, NNL]
         iou_loss: [-1.0, IOU]
+        rec_deformed_loss: [10, REC]
+
+model_params:
+    common_params:
+        num_kp: 18
+        kp_variance: 'single'
+        num_channels: 3
+    discriminator_params:
+        kp_embedding_params:
+            norm_const: 100
+        block_expansion: 32
+        max_features: 256
+        num_blocks: 4
+    generator_params:
+        block_expansion: 32
+        max_features: 1024
+        num_blocks: 5
+        num_refinement_blocks: 4
+        dense_motion_params:
+            block_expansion: 32
+            max_features: 1024
+            num_blocks: 5
+            use_mask: True
+            use_correction: True
+            mask_embedding_params:
+                use_heatmap: True
+                use_deformed_source_image: True
+                heatmap_type: 'difference'
+                norm_const: 100
+            num_group_blocks: 2
+        kp_embedding_params:
+            use_heatmap: True
+            norm_const: 100
+            heatmap_type: 'difference'
+
 test_settings:
     inference: TRUE

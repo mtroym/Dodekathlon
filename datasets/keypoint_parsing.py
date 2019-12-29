@@ -82,7 +82,7 @@ class KeypointParsingDataset:
                     temp_path = os.path.join(root, file[:4] + file[5:])
                     key = "fashion" + temp_path.replace(data_path, '').replace('/', '').replace("id_", "id")
                     self.path_dict[key] = real_path
-                    self.parsing_dict[key] = real_path.replace(data_path, parsing_path).replace(".jpg", ".png")
+                    self.parsing_dict[key] = real_path.replace(data_path, parsing_path).replace(".jpg", ".npy")
 
             # create checkpoint files. to load next time.
             self.data_info["parsing_dict"] = self.parsing_dict
@@ -125,24 +125,49 @@ class KeypointParsingDataset:
         img_path = self.path_dict[name]
         parsing_path = self.parsing_dict[name]
         image = Image.open(img_path, 'r').convert('RGB')
-        semantic = cv2.imread(parsing_path, cv2.IMREAD_GRAYSCALE)
+        # semantic = cv2.imread(parsing_path, cv2.IMREAD_GRAYSCALE)
+        semantic = np.load(parsing_path).astype(np.float32)
+        assert semantic.max() < self.num_parsing
         assert image is not None, "{}, image not exists, img_path".format(img_path)
         assert semantic is not None, "{}, semantic not exists, parsing_path".format(parsing_path)
 
         semantic = np.pad(semantic, ((0, 0), (40, 40)), mode='constant', constant_values=(0,))
         semantic = self._get_one_hot(semantic)
-        keypoint = self.kp2tensor(self.annotation_dict[name])
+        # keypoint = self.kp2tensor(self.annotation_dict[name])
+        keypoint = self.kp2dict(self.annotation_dict[name])
         return image, keypoint, semantic
 
     def __getitem__(self, idx):
         pair = self.pairs[idx]
         (src, src_kp, src_sem), (trg, trg_kp, trg_sem) = self._get_one(pair[0]), self._get_one(pair[1])
         src, trg = self.preprocess(src), self.preprocess(trg)
-        src_kp, trg_kp = src_kp.to_dense().float(), trg_kp.to_dense().float()
-        src_kp, trg_kp = src_kp.permute([-1, 0, 1]), trg_kp.permute([-1, 0, 1])
-        src_kp, trg_kp = self.dilation(src_kp), self.dilation(trg_kp)
+        # src_kp, trg_kp = src_kp.to_dense().float(), trg_kp.to_dense().float()
+        # src_kp, trg_kp = src_kp.permute([-1, 0, 1]), trg_kp.permute([-1, 0, 1])
+        # src_kp, trg_kp = self.dilation(src_kp), self.dilation(trg_kp)
+        src, trg = src.unsqueeze(1), trg.unsqueeze(1)
         blob = self._get_blob(src, src_kp, src_sem, trg, trg_kp, trg_sem)
         return blob
+
+    def kp2dict(self, corr) -> dict:
+        '''
+        :param corr:
+        :return: dict : "mean": [d, c, 2], "var": [d, c, 1, 1]
+        '''
+        kp = {}
+        kp["mean"] = torch.zeros(1, len(corr[0]), 2).float()
+        kp["var"] = torch.zeros(1, len(corr[0]), 1, 1).float()
+
+        for i, (r, c) in enumerate(zip(corr[0], corr[1])):
+            # Note: This setting is only for deepfashion256.
+            if self.opt.dataset == "deepfashion256":
+                if r < 0 or c < 0 or r >= self.w or c + 40 >= self.h:
+                    continue
+                kp["mean"][0, i, 0] = r
+                kp["mean"][0, i, 1] = c + 40
+                kp["var"][0, i, 0, 0] = self.configure["kp_var"]
+            else:
+                raise NotImplementedError("The dataset has not implemented the kp2dict method.")
+        return kp
 
     def kp2tensor(self, corr) -> torch.Tensor:
         indx = [[], [], []]

@@ -53,12 +53,22 @@ class NNLoss(nn.Module):
 
         return nn_loss
 
+class RECLoss(nn.Module):
+    def __init__(self):
+        super(RECLoss, self).__init__()
+        pass
+
+    def forward(self, prediction, target):
+        diff = torch.abs(prediction - target)
+        return diff.view(diff.shape[0], -1).mean(-1).mean()
+
 loss_dict = {
     "MSE": nn.MSELoss(),
     "BCE": nn.BCELoss(),
     "L1" : nn.L1Loss(),
     "NNL": NNLoss(),
     "IOU": IOULoss(),
+    "REC": RECLoss()
 }
 
 def create_loss_single(lamda, loss):

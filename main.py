@@ -1,5 +1,6 @@
 import importlib
 import time
+import torch
 
 import cv2
 
@@ -21,22 +22,38 @@ def init_all():
     loss_init, metrics_init = criterions_lib.create_criterion(opt_init)
     return opt_init, dataloader_init, model_init, loss_init, metrics_init
 
+def dict2cuda(data):
+    res_data = {}
+    for k, v in data.items():
+        if not isinstance(v, dict): v = v.cuda()
+        else:
+            v = dict2cuda(v)
+        res_data[k] = v
+    return res_data
 
 if __name__ == '__main__':
     opt, dataloader, model, loss, metrics = init_all()
     visualizer = Visualizer(opt)
     saver = Saver(opt)
     saver.latest()
+
+    if opt.gpu_ids and torch.cuda.is_available():
+        model.cuda()
+
     for epoch in range(0, 1):
         epoch_start_time = time.time()
         epoch_iter = 0
 
         for i, data in enumerate(dataloader):
+            if opt.gpu_ids and torch.cuda.is_available():
+                data = dict2cuda(data)
             iter_start_time = time.time()
             res = model.train_batch(inputs=data, loss=loss, metrics=metrics)
             loss_log = ''.join([' {}: {:.4f} |'.format(k, v) for k, v in res.items()])
-            print(res["loss_IOU"])
             print(loss_log)
+
+        model.LRDecayStep(epoch)
+
             # visualizer.display_current_results(vis, epoch, save_result=True)
         #
         # for i, data in enumerate(dataloader_val):
