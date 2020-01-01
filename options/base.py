@@ -40,7 +40,9 @@ class BaseOptions:
         self.parser.add_argument('--suffix', type=str, default='default', help='configure files.')
         self.parser.add_argument('--no_html', type=bool, default=False, help='configure files.')
         self.parser.add_argument('--save_epoch', type=int, default=10, help='epochs to save.')
-
+        self.parser.add_argument('--summary_writer', type=bool, default=True, help='summary writer')
+        self.parser.add_argument('--train_summary', type=str, default='./checkpoints/train', help='checkpoint path')
+        self.parser.add_argument('--val_summary', type=str, default='./checkpoints/val', help='')
         self.opt = self.parser.parse_args()
         # down-sampling times
         self.initialized = True

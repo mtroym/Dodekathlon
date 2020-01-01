@@ -62,13 +62,50 @@ class RECLoss(nn.Module):
         diff = torch.abs(prediction - target)
         return diff.view(diff.shape[0], -1).mean(-1).mean()
 
+class RECONSLoss(nn.Module):
+    def __init__(self):
+        super(RECONSLoss, self).__init__()
+        self.reconstruction_loss = RECLoss()
+
+    def forward(self, discriminator_maps_real, discriminator_maps_generated, lamda):
+        recons_loss = 0
+        for i, (a, b) in enumerate(zip(discriminator_maps_real[:-1], discriminator_maps_generated[:-1])):
+            if lamda[i] == 0:
+                continue
+            recons_loss += lamda[i] * self.reconstruction_loss(a, b)
+        return recons_loss
+
+class GENGANLoss(nn.Module):
+    def __init__(self):
+        super(GENGANLoss, self).__init__()
+        pass
+
+    def forward(self, discriminator_maps_generated):
+        scores_generated = discriminator_maps_generated[-1]
+        score = (1 - scores_generated) ** 2
+        return score.view(score.shape[0], -1).mean(-1).mean()
+
+class DISGANLoss(nn.Module):
+    def __init__(self):
+        super(DISGANLoss, self).__init__()
+        pass
+
+    def forward(self, discriminator_maps_generated, discriminator_maps_real):
+        scores_real = discriminator_maps_real[-1]
+        scores_generated = discriminator_maps_generated[-1]
+        score = (1 - scores_real) ** 2 + scores_generated ** 2
+        return score.view(score.shape[0], -1).mean(-1).mean()
+
 loss_dict = {
     "MSE": nn.MSELoss(),
     "BCE": nn.BCELoss(),
     "L1" : nn.L1Loss(),
     "NNL": NNLoss(),
     "IOU": IOULoss(),
-    "REC": RECLoss()
+    "REC": RECLoss(),
+    "RECONSLoss": RECONSLoss(),
+    "GENGANLoss": GENGANLoss(),
+    "DISGANLoss": DISGANLoss()
 }
 
 def create_loss_single(lamda, loss):

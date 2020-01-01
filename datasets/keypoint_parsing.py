@@ -113,9 +113,9 @@ class KeypointParsingDataset:
         return ones.view(size).permute([-1, 0, 1])
 
     @staticmethod
-    def _get_blob(src=None, kp0=None, sem0=None, trg=None, kp1=None, sem1=None):
-        return {"Source": src, "SourceKP": kp0, "SourceParsing": sem0,
-                "Target": trg, "TargetKP": kp1, "TargetParsing": sem1}
+    def _get_blob(src=None, kp0=None, sem0=None, trg=None, kp1=None, sem1=None, kp0_onehot=None, kp1_onehot=None):
+        return {"Source": src, "SourceKP": kp0, "SourceKP_OneHot": kp0_onehot, "SourceParsing": sem0,
+                "Target": trg, "TargetKP": kp1, "TargetKP_OneHot": kp1_onehot, "TargetParsing": sem1}
 
     def __len__(self):
         return len(self.pairs)
@@ -133,19 +133,22 @@ class KeypointParsingDataset:
 
         semantic = np.pad(semantic, ((0, 0), (40, 40)), mode='constant', constant_values=(0,))
         semantic = self._get_one_hot(semantic)
-        # keypoint = self.kp2tensor(self.annotation_dict[name])
+        keypoint_onehot = self.kp2tensor(self.annotation_dict[name])
         keypoint = self.kp2dict(self.annotation_dict[name])
-        return image, keypoint, semantic
+        return image, keypoint, semantic, keypoint_onehot
 
     def __getitem__(self, idx):
         pair = self.pairs[idx]
-        (src, src_kp, src_sem), (trg, trg_kp, trg_sem) = self._get_one(pair[0]), self._get_one(pair[1])
+        (src, src_kp, src_sem, src_kp_onehot), (trg, trg_kp, trg_sem, trg_kp_onehot) = self._get_one(pair[0]), self._get_one(pair[1])
         src, trg = self.preprocess(src), self.preprocess(trg)
         # src_kp, trg_kp = src_kp.to_dense().float(), trg_kp.to_dense().float()
         # src_kp, trg_kp = src_kp.permute([-1, 0, 1]), trg_kp.permute([-1, 0, 1])
         # src_kp, trg_kp = self.dilation(src_kp), self.dilation(trg_kp)
+        src_kp_onehot, trg_kp_onehot = src_kp_onehot.to_dense().float(), trg_kp_onehot.to_dense().float()
+        src_kp_onehot, trg_kp_onehot = src_kp_onehot.permute([-1, 0, 1]), trg_kp_onehot.permute([-1, 0, 1])
+
         src, trg = src.unsqueeze(1), trg.unsqueeze(1)
-        blob = self._get_blob(src, src_kp, src_sem, trg, trg_kp, trg_sem)
+        blob = self._get_blob(src, src_kp, src_sem, trg, trg_kp, trg_sem, src_kp_onehot, trg_kp_onehot)
         return blob
 
     def kp2dict(self, corr) -> dict:

@@ -2,6 +2,8 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 
+from tensorboardX import SummaryWriter
+
 from modules.dense_motion_module import DenseMotionModule, IdentityDeformation
 from modules.movement_embedding import MovementEmbeddingModule
 
@@ -13,7 +15,8 @@ from .helpers import get_scheduler
 
 import yaml
 import os
-
+import numpy as np
+import cv2
 
 class DownBlock3D(nn.Module):
     """
@@ -171,7 +174,7 @@ class PTPSGenerator(nn.Module):
 class PTPSModel:
     def __init__(self, opt):
         super(PTPSModel, self).__init__()
-        self.name = 'PTS'
+        self.name = 'PTPS'
         self.opt = opt
         self.gpu_ids = opt.gpu_ids if opt.gpu_ids else []
         config = yaml.load(open(os.path.join(opt.configure_file)))
@@ -183,6 +186,14 @@ class PTPSModel:
                                             lr=opt.lr,
                                             betas=(opt.beta1, 0.999))
         self.scheduler_G = get_scheduler(self.optimizer_G, opt)
+        self.optimizer_D = torch.optim.Adam(self.discr.parameters(),
+                                            lr=opt.lr,
+                                            betas=(opt.beta1, 0.999))
+        self.scheduler_D = get_scheduler(self.optimizer_D, opt)
+
+        if self.opt.summary_writer:
+            self.train_summary_writer = SummaryWriter(self.opt.train_summary)
+            self.val_summary_writer = SummaryWriter(self.opt.val_summary)
 
     def cuda(self):
         self.gener.cuda()
@@ -190,34 +201,83 @@ class PTPSModel:
 
     def LRDecayStep(self, epoch):
         self.scheduler_G.step()
+        self.scheduler_D.step()
 
-    def train_batch(self, inputs: dict, loss: dict, metrics: dict):
-        # print("entering train batch~")
+    def train_batch(self, inputs: dict, loss: dict, metrics: dict, it):
         loss_accum = {}
         source_image, target_image, kp_driving, kp_source = \
             inputs["Source"], inputs["Target"], inputs["TargetKP"], inputs["SourceKP"]
-        fake_out = self.gener(source_image, kp_driving, kp_source)
 
+        # training Generator
+        fake_out = self.gener(source_image, kp_driving, kp_source)
         fake_prediction = fake_out["target_prediction"]
         fake_deformed = fake_out["target_deformed"]
 
-        # discriminator_maps_generated = self.discr(fake_prediction, kp_driving, kp_source)
-        discriminator_maps_real = self.discr(source_image, kp_driving, kp_source)
-        self.optimizer_G.zero_grad()
-        loss_accum["loss_recon_deformed"] = loss["rec_deformed_loss"](discriminator_maps_real[0], fake_deformed)
-        # if loss_weights['reconstruction'] != 0:
-        #     for i, (a, b) in enumerate(zip(discriminator_maps_real[:-1], discriminator_maps_generated[:-1])):
-        #         if loss_weights['reconstruction'][i] == 0:
-        #             continue
-        #         loss_values.append(reconstruction_loss(b, a, weight=loss_weights['reconstruction'][i]))
-        loss_bk = loss_accum["loss_recon_deformed"]
-        loss_bk.backward()
-        self.optimizer_G.step()
-        # for key, val in fake_out.items():
-        #     print(key, val.size())
-        # pass
+        discriminator_maps_generated = self.discr(fake_prediction, kp_driving, kp_source)
+        discriminator_maps_real = self.discr(target_image, kp_driving, kp_source)
 
+        self.optimizer_G.zero_grad()
+
+        loss_accum["loss_recon_deformed"] = loss["rec_deformed_loss"](discriminator_maps_real[0], fake_deformed)
+        # loss_accum["loss_reconstruction"] = loss["rec_loss"](discriminator_maps_real, discriminator_maps_generated,
+        #                                                      self.opt.rec_loss_weight)
+        # loss_accum["loss_generator_gan"] = loss["generator_gan_loss"](discriminator_maps_generated)
+        loss_bk = loss_accum["loss_recon_deformed"]# + loss_accum["loss_reconstruction"] +\
+                  #loss_accum["loss_generator_gan"]
+
+        loss_bk.backward(retain_graph=True)
+        self.optimizer_G.step()
+
+        # training Discriminator
+        # discriminator_maps_generated = self.discr(fake_prediction, kp_driving, kp_source)
+        # discriminator_maps_real = self.discr(source_image, kp_driving, kp_source)
+
+        # self.optimizer_D.zero_grad()
+        #
+        # loss_accum["loss_discriminator_gan"] = loss["discriminator_gan_loss"](discriminator_maps_generated,
+        #                                                                      discriminator_maps_real)
+        # loss_bk = loss_accum["loss_discriminator_gan"]
+        #
+        # loss_bk.backward()
+        # self.optimizer_D.step()
+        #
+        # if self.train_summary_writer:
+        #     for x, y in list(loss_accum.items()):
+        #         self.train_summary_writer.add_scalar(x, y.item(), it)
+
+        make_vis(fake_out, inputs)
         return loss_accum
+
+def make_vis(fake_out, inputs):
+    source_image, target_image, kp_driving, kp_source = \
+        inputs["Source"], inputs["Target"], inputs["TargetKP_OneHot"], inputs["SourceKP_OneHot"]
+
+    deformed_source_image = fake_out["target_deformed"]
+
+    [source_image, target_image, deformed_source_image] = \
+        list(map(lambda x: x.squeeze(2), [source_image, target_image, deformed_source_image]))
+
+    [kp_source, kp_driving] = list(map(lambda x: torch.sum(x, dim=1, keepdim=True), [kp_source, kp_driving]))
+
+    [source_image, target_image, deformed_source_image, kp_driving, kp_source] = \
+        list(map(lambda x: x.detach().cpu().numpy(), [source_image, target_image,
+                                                      deformed_source_image,
+                                                      kp_driving, kp_source]))
+
+    # show the source, predicted target and ground truth target
+    [src, trg, deform] = list(map(lambda x: (x.transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0,
+                              [source_image, target_image, deformed_source_image]))
+    img_cat = np.concatenate([src, trg, deform], 2)
+
+    # show the pose result
+    [src_kp, trg_kp] = list(map(lambda x: (x.transpose([0, 2, 3, 1])) * 255.,
+                                        [kp_source, kp_driving]))
+    kp_cat = np.concatenate([src_kp, trg_kp, trg_kp], 2)
+    kp_cat = np.concatenate([kp_cat, ]*3, 3)
+
+    # concat image and pose to one image
+    total = np.concatenate([img_cat, kp_cat], 1)
+    cv2.imwrite('test.png', total[0])
 
 if __name__ == '__main__':
     pass

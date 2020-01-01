@@ -8,7 +8,7 @@ train_settings:
     load_size: 256
     fine_size: 256
     refresh: FALSE
-    batchSize: 8
+    batchSize: 6
     dropout_rate: 0.5
     hidden: 16
     beta1: 0.5
@@ -20,13 +20,16 @@ train_settings:
     span_range: 0.9
     norm: 'in'
     epoch_milestones: [500]
+    rec_loss_weight: [10, 10, 10, 10, 1]
     loss:
         gan_loss: [0.0, MSE]
         l1_loss: [1.0, L1]
         nn_loss: [0.01, NNL]
         iou_loss: [-1.0, IOU]
         rec_deformed_loss: [10, REC]
-
+        rec_loss: [1.0, RECONSLoss]
+        generator_gan_loss: [1.0, GENGANLoss]
+        discriminator_gan_loss: [1.0, DISGANLoss]
 model_params:
     common_params:
         num_kp: 18
@@ -52,13 +55,13 @@ model_params:
             mask_embedding_params:
                 use_heatmap: True
                 use_deformed_source_image: True
-                heatmap_type: 'difference'
+                heatmap_type: 'gaussian'
                 norm_const: 100
             num_group_blocks: 2
         kp_embedding_params:
             use_heatmap: True
             norm_const: 100
-            heatmap_type: 'difference'
+            heatmap_type: 'gaussian'
 
 test_settings:
     inference: TRUE

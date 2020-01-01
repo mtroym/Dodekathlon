@@ -48,7 +48,7 @@ if __name__ == '__main__':
             if opt.gpu_ids and torch.cuda.is_available():
                 data = dict2cuda(data)
             iter_start_time = time.time()
-            res = model.train_batch(inputs=data, loss=loss, metrics=metrics)
+            res = model.train_batch(inputs=data, loss=loss, metrics=metrics, it=epoch*len(dataloader)+i)
             loss_log = ''.join([' {}: {:.4f} |'.format(k, v) for k, v in res.items()])
             print(loss_log)
 
