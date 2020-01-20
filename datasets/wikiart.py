@@ -121,7 +121,8 @@ class ArtsDataset:
         src, cls = self._get_one(idx)
         processed_src = self.preprocess(src)
         if self.subclass != "all":
-            cls = torch.LongTensor([0, 1])
+            # cls = torch.LongTensor(1)
+            cls = 1
         else:
             pass
         blob = self._get_blob(processed_src, cls)

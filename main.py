@@ -34,16 +34,17 @@ if __name__ == '__main__':
         for i, data in enumerate(dataloader):
             iter_start_time = time.time()
             res = model.train_batch(inputs=data, loss=loss, metrics=metrics)
-            #     loss_log = ''.join([' {}: {:.4f} |'.format(k, v) for k, v in res.items()])
-            #     print(loss_log)
-            #     visualizer.display_current_results(vis, epoch, save_result=True)
+            loss_log = "[{}/{}][{}/{}]".format(epoch, opt.epochs, i, len(dataloader)) + \
+                       '|'.join([' {}: {:.4f} '.format(k, v) for k, v in res.items() if k != "Target"])
+            print(loss_log)
+            # visualizer.display_current_results(res, epoch, save_result=True)
             #
             # for i, data in enumerate(dataloader_val):
             #     iter_start_time
             #
             #             visualizer.reset()
             #     pass
-            print("D: ", res["Loss_D"], " ,G: ", res["Loss_G"], "total: ", res["Loss_D"] + res["Loss_G"])
+            # print("D: ", res["Loss_D"], ", G: ", res["Loss_G"], ",total: ", res["Loss_D"] + res["Loss_G"])
             cv2.imwrite("test{}.png".format(i), (res["Target"][0].data.numpy().transpose([1, 2, 0]) + 0.5) * 255)
         #     cv2.imwrite("testkp.png", res["Target"][0].transpose[1, 2, 0].data.numpy().sum(axis=-1) * 255)
     #

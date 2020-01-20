@@ -1,4 +1,7 @@
 import torch.utils.data as data
+from PIL import Image
+
+Image.MAX_IMAGE_PIXELS = 1000000000
 
 
 class BaseDataset(data.Dataset):

@@ -11,7 +11,7 @@ import os
 import torch
 from torch import nn
 
-from models.helpers import get_scheduler
+from models.helpers import get_scheduler, init_weights
 
 
 class CANGenerator(nn.Module):
@@ -29,17 +29,17 @@ class CANGenerator(nn.Module):
 
         # input to the network
         init_size = self.size_list[0]
-        self.header = nn.Linear(self.latent_dim, init_size * init_size * self.hidden)  # BN x 4 x 4 x 1024
+        self.header = nn.Linear(self.latent_dim, init_size * init_size * self.hidden, bias=False)  # BN x 4 x 4 x 1024
         self.norm = norm_layer(self.hidden, eps=1e-5, momentum=0.9)
         self.model_list = []
         for i in range(len(self.channel_list) - 1):
             in_cha = int(self.channel_list[i])
             out_cha = int(self.channel_list[i + 1])
             # print(in_cha, out_cha)
-            self.model_list.append(nn.ConvTranspose2d(in_cha, out_cha, kernel_size=5, stride=2, padding=2, output_padding=1, padding_mode="zeros"))
+            self.model_list.append(nn.ConvTranspose2d(in_cha, out_cha, kernel_size=4, stride=2, padding=1, padding_mode="zeros", bias=False))
             self.model_list.append(norm_layer(out_cha, eps=1e-5, momentum=0.9))
             if i != len(self.channel_list) - 2:
-                self.model_list.append(self.activation())
+                self.model_list.append(self.activation(inplace=True))
             else:
                 self.model_list.append(nn.Tanh())
         self.core = nn.Sequential(
@@ -70,15 +70,16 @@ class CANDiscriminator(nn.Module):
         self.norm = norm_layer
         self.in_channel = in_channel
         self.model_list = []
-        self.enter = nn.Conv2d(self.in_channel, self.channel_list[0], kernel_size=5, stride=2, padding=2, padding_mode="reflex")
+        self.enter = nn.Conv2d(self.in_channel, self.channel_list[0], kernel_size=4, stride=2, padding=1, padding_mode="reflex", bias=False)
         self.enter_act = self.activation(0.2)
         for i in range(len(self.channel_list) - 1):
-            self.model_list.append(nn.Conv2d(self.channel_list[i], self.channel_list[i + 1], kernel_size=5, stride=2, padding=2, padding_mode="reflex"))
+            self.model_list.append(nn.Conv2d(self.channel_list[i], self.channel_list[i + 1],
+                                             kernel_size=4, stride=2, padding=1, padding_mode="reflex", bias=False))
             self.model_list.append(self.norm(self.channel_list[i + 1]))
-            self.model_list.append(self.activation(0.2))
+            self.model_list.append(self.activation(0.2, inplace=True))
         self.core = nn.Sequential(*self.model_list)
         self.classifier_rf = nn.Sequential(
-            nn.Linear(self.channel_list[-1] * 16, num_class),
+            nn.Conv2d(self.channel_list[-1], 1, kernel_size=4, stride=1, padding=0, bias=False),
             nn.Sigmoid()
         )
 
@@ -86,15 +87,79 @@ class CANDiscriminator(nn.Module):
         before_core = self.enter_act(self.enter(inputs))
         score = self.core(before_core)
         # print("Score", score.shape)
-        flatten = score.flatten(start_dim=1)
-        # print(flatten.shape)
-        discriminator_output = self.classifier_rf(flatten)
-        return discriminator_output
+        discriminator_output = self.classifier_rf(score)
+        return discriminator_output.flatten()
+
+
+nz = 100  # Size of z latent vector (i.e. size of generator input)
+ngf = 64  # Size of feature maps in generator
+nc = 3
+ndf = 64
+
+
+class Generator(nn.Module):
+    def __init__(self, ngpu):
+        super(Generator, self).__init__()
+        self.ngpu = ngpu
+        self.main = nn.Sequential(
+            # input is Z, going into a convolution
+            nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(ngf * 8),
+            nn.ReLU(True),
+            # state size. (ngf*8) x 4 x 4
+            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 4),
+            nn.ReLU(True),
+            # state size. (ngf*4) x 8 x 8
+            nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf * 2),
+            nn.ReLU(True),
+            # state size. (ngf*2) x 16 x 16
+            nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf),
+            nn.ReLU(True),
+            # state size. (ngf) x 32 x 32
+            nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False),
+            nn.Tanh()
+            # state size. (nc) x 64 x 64
+        )
+
+    def forward(self, input):
+        return self.main(input)
+
+
+class Discriminator(nn.Module):
+    def __init__(self, ngpu):
+        super(Discriminator, self).__init__()
+        self.ngpu = ngpu
+        self.main = nn.Sequential(
+            # input is (nc) x 64 x 64
+            nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf) x 32 x 32
+            nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*2) x 16 x 16
+            nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*4) x 8 x 8
+            nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 8),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*8) x 4 x 4
+            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, input):
+        return self.main(input).flatten()
 
 
 class CANModel:
     def __init__(self, opt):
-        self.name = 'PATN'
+        self.name = 'Creative Adversarial Network'
         self.opt = opt
 
         self.is_train = True
@@ -103,48 +168,72 @@ class CANModel:
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and len(self.gpu_ids) > 0) else "cpu")
         self.dtype = torch.cuda.FloatTensor if self.device != torch.device("cpu") else torch.FloatTensor
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
-        self.discriminator = CANDiscriminator(opt.channel, num_class=2).to(self.device)
-        self.generator = CANGenerator(latent_dim=opt.latent_dim, hidden=opt.hidden).to(self.device)
+        if self.opt.fine_size == 256:
+            self.discriminator = CANDiscriminator(opt.channel, num_class=2).to(self.device)
+            self.generator = CANGenerator(latent_dim=opt.latent_dim, hidden=opt.hidden).to(self.device)
+            self.fixed_noise = torch.randn(self.batch_size, self.opt.latent_dim).to(self.device)
+        elif self.opt.fine_size == 64:
+            self.discriminator = Discriminator(0)
+            self.generator = Generator(0)
+            self.fixed_noise = torch.randn((self.batch_size, nz, 1, 1)).to(self.device)
         self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
         self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-        self.schedular_D = get_scheduler(self.optimizer_D, opt)
-        self.schedular_G = get_scheduler(self.optimizer_G, opt)
+        # self.schedular_D = get_scheduler(self.optimizer_D, opt)
+        # self.schedular_G = get_scheduler(self.optimizer_G, opt)
+
+        init_weights(self.discriminator)
+        init_weights(self.generator)
 
     def cuda(self):
         self.discriminator.type(self.dtype)
         self.generator.type(self.dtype)
 
     def train_batch(self, inputs: dict, loss: dict, metrics: dict) -> dict:
-
         real = inputs["Source"].type(self.dtype)
-        real_label = inputs["Class"].type(self.dtype)
-        fake_label = torch.zeros((self.opt.batchSize, 2), device=self.device).type(self.dtype)
-        fake_label[:, 0] = 1
+        # real_label = inputs["Class"].type(self.dtype)
+        # fake_label = torch.zeros((self.batch_size,), device=self.device).type(self.dtype)
+
+        current_minibatch = real.shape[0]
+
+        self.optimizer_G.zero_grad()
+        random_noise = None
+        label = torch.full((current_minibatch,), 1).to(self.device)
+
+        if self.opt.fine_size == 256:
+            random_noise = torch.randn((current_minibatch, self.opt.latent_dim), device=self.device)
+        elif self.opt.fine_size == 64:
+            random_noise = torch.randn((current_minibatch, nz, 1, 1), device=self.device)
+
+        fake = self.generator(random_noise)
+        pred_fake = self.discriminator(fake)
+        label.fill_(1)
+        err_g = loss["bce_loss"](pred_fake, label)
+        err_g.backward()
+        err_g_d = float(err_g.mean().item())
+        self.optimizer_G.step()
 
         self.optimizer_D.zero_grad()
         # train with real label for D
         pred_real = self.discriminator(real)
-        print(pred_real.shape)
-        err_d_real = loss["bce_loss"](pred_real, real_label)
+        label.fill_(1)
+        err_d_real = loss["bce_loss"](pred_real, label)
+        err_d_real.backward()
+        err_d = float(err_d_real.mean().item())
+
         # train with fake label for D
-        fixed_noise = torch.randn((self.opt.batchSize, self.opt.latent_dim), device=self.device)
-        fake = self.generator(fixed_noise)
-        pred_fake = self.discriminator(fake)
-        err_d_fake = loss["bce_loss"](pred_fake, fake_label)
-        err_d = err_d_fake + err_d_real
-        err_d.backward(retain_graph=True)
+        pred_fake = self.discriminator(fake.detach())
+        label.fill_(0)
+        err_d_fake = loss["bce_loss"](pred_fake, label)
+        err_d_fake.backward()
+        err_d += float(err_d_fake.mean().item())
+        # err_d.backward()
         self.optimizer_D.step()
 
-        self.optimizer_G.zero_grad()
-        pred_fake = self.discriminator(fake)
-        err_g = loss["bce_loss"](pred_fake, fake_label)
-        err_g.backward()
-        self.optimizer_G.step()
-
         with torch.no_grad():
-            fake = self.generator(fixed_noise).detach().cpu()
+            fake = self.generator(self.fixed_noise).detach().cpu()
+            print(fake.shape)
 
-        return {"Target": fake, "Loss_G": float(err_g.mean()), "Loss_D": float(err_d.mean())}
+        return {"Target": fake, "Loss_G": err_g_d, "Loss_D": err_d}
 
 
 if __name__ == '__main__':
