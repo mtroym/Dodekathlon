@@ -1,4 +1,4 @@
-base_dir: /Users/tony/Develop/data/wikiart/  # data dir of deepfashion origin data download from website.
+base_dir: ../../data/wikiart/  # data dir of deepfashion origin data download from website.
 image_dir: images  # data dir of deepfashion origin data download from website.
 split_dir: split
 shuffle: TRUE

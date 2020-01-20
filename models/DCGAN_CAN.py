@@ -29,7 +29,9 @@ class CANGenerator(nn.Module):
 
         # input to the network
         init_size = self.size_list[0]
-        self.header = nn.Linear(self.latent_dim, init_size * init_size * self.hidden, bias=False)  # BN x 4 x 4 x 1024
+        # self.header = nn.Linear(self.latent_dim, init_size * init_size * self.hidden, bias=False)  # BN x 4 x 4 x 1024
+        self.header = nn.ConvTranspose2d(self.latent_dim, out_channels=self.hidden,
+                                         kernel_size=init_size, bias=False)  # BN x 4 x 4 x 1024
         self.norm = norm_layer(self.hidden, eps=1e-5, momentum=0.9)
         self.model_list = []
         for i in range(len(self.channel_list) - 1):
@@ -51,11 +53,11 @@ class CANGenerator(nn.Module):
         self.core.float()
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        batch_size = inputs.shape[0]
-        linear = self.header(inputs)
+        # batch_size = inputs.shape[0]
+        head = self.header(inputs)
         # print(linear.shape)
-        linear_reshape = linear.reshape((batch_size, self.hidden, self.size_list[0], self.size_list[0]))
-        normalized = self.norm(linear_reshape)
+        # linear_reshape = linear.reshape((batch_size, self.hidden, self.size_list[0], self.size_list[0]))
+        normalized = self.norm(head)
         # print(normalized.shape)
         activated = self.activation(inplace=True)(normalized)
         fake_image = self.core(activated)
@@ -153,8 +155,9 @@ class Discriminator(nn.Module):
             nn.Sigmoid()
         )
 
-    def forward(self, input):
-        return self.main(input).flatten()
+    def forward(self, input_data):
+        random_noise = torch.rand_like(input_data, requires_grad=False) * 0.001
+        return self.main(input_data + random_noise).flatten()
 
 
 class CANModel:
@@ -171,7 +174,7 @@ class CANModel:
         if self.opt.fine_size == 256:
             self.discriminator = CANDiscriminator(opt.channel, num_class=2).to(self.device)
             self.generator = CANGenerator(latent_dim=opt.latent_dim, hidden=opt.hidden).to(self.device)
-            self.fixed_noise = torch.randn(self.batch_size, self.opt.latent_dim).to(self.device)
+            self.fixed_noise = torch.randn(self.batch_size, self.opt.latent_dim, 1, 1).to(self.device)
         elif self.opt.fine_size == 64:
             self.discriminator = Discriminator(0)
             self.generator = Generator(0)
@@ -183,6 +186,7 @@ class CANModel:
 
         init_weights(self.discriminator)
         init_weights(self.generator)
+        self.cuda()
 
     def cuda(self):
         self.discriminator.type(self.dtype)
@@ -198,12 +202,10 @@ class CANModel:
         self.optimizer_G.zero_grad()
         random_noise = None
         label = torch.full((current_minibatch,), 1).to(self.device)
-
         if self.opt.fine_size == 256:
-            random_noise = torch.randn((current_minibatch, self.opt.latent_dim), device=self.device)
+            random_noise = torch.randn((current_minibatch, self.opt.latent_dim, 1, 1)).to(self.device)
         elif self.opt.fine_size == 64:
-            random_noise = torch.randn((current_minibatch, nz, 1, 1), device=self.device)
-
+            random_noise = torch.randn((current_minibatch, nz, 1, 1)).to(self.device)
         fake = self.generator(random_noise)
         pred_fake = self.discriminator(fake)
         label.fill_(1)
