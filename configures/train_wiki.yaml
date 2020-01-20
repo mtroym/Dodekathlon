@@ -1,0 +1,27 @@
+train_settings:
+    lr: !!float 0.001
+    optimizer: Adam
+    dataset: wikiart
+    data_class:
+        class: style
+        subclass: Color_Field_Painting
+    resize_or_crop: resize_and_crop
+    model: DCGAN_CAN
+    epochs: !!int 100
+    isTrain: TRUE
+    load_size: 256
+    fine_size: 256
+    refresh: TRUE
+    batchSize: 8
+    dropout_rate: 0.5
+    hidden: 1024
+    beta1: 0.1
+    lr_policy: plateau
+    latent_dim: 100
+    loss:
+        bce_loss: [1.0, BCE]
+        nn_loss: [0.01, NNL]
+        mse_loss: [1.0, MSE]
+
+test_settings:
+    inference: TRUE

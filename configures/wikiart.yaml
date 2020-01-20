@@ -1,0 +1,24 @@
+base_dir: /Users/tony/Develop/data/wikiart/  # data dir of deepfashion origin data download from website.
+image_dir: images  # data dir of deepfashion origin data download from website.
+split_dir: split
+shuffle: TRUE
+data_aggregations: ["genre", "style", "artist"]
+data_details:
+    genre:
+        num_class: 10
+        train_list: genre_train.csv
+        label2name: genre_class.txt
+        val_list: genre_val.csv
+
+    style:
+        num_class: 27
+        train_list: style_train.csv
+        label2name: style_class.txt
+        val_list: style_val.csv
+
+    artist:
+        num_class: 23
+        train_list: artist_train.csv
+        label2name: artist_class.txt
+        val_list: artist_val.csv
+channel: 3

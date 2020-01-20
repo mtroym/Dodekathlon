@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from datasets.base import BaseDataset
 from datasets.keypoint import KeypointDataset
 from datasets.keypoint_parsing import KeypointParsingDataset
-
+from datasets.wikiart import ArtsDataset
 
 def create_dataset(opt):
     dataset = None
@@ -11,6 +11,8 @@ def create_dataset(opt):
         dataset = BaseDataset()
     elif opt.dataset in ["deepfashion256", "market1501", "deepfashion512"]:
         dataset = KeypointDataset(opt)
+    elif opt.dataset in ["wikiart", "painting", "Rothko"]:
+        dataset = ArtsDataset(opt)
     return dataset
 
 

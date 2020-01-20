@@ -36,16 +36,17 @@ class BaseOptions:
         self.parser.add_argument('--init_type', type=str, default='normal', help='network initialization [normal|xavier|kaiming|orthogonal]')
         self.parser.add_argument('--padding_type', type=str, default='reflect', help='# of input image channels')
         self.parser.add_argument('--configure_path', type=str, default='configures', help='configure path.')
-        self.parser.add_argument('--configure_file', type=str, default='train.yaml', help='configure files.')
+        self.parser.add_argument('--configure_file', type=str, default='train', help='configure files.')
         self.parser.add_argument('--suffix', type=str, default='default', help='configure files.')
         self.parser.add_argument('--no_html', type=bool, default=False, help='configure files.')
         self.parser.add_argument('--save_epoch', type=int, default=10, help='epochs to save.')
-
         self.opt = self.parser.parse_args()
         # down-sampling times
         self.initialized = True
         # build configure file.
-        self.opt.configure_file = os.path.join(self.opt.configure_path, self.opt.configure_file)
+        self.opt.configure_file = os.path.join(self.opt.configure_path, self.opt.configure_file + ".yaml")
+
+
 
     def parse(self, configure=None):
         if not self.initialized:
