@@ -1,4 +1,5 @@
 import importlib
+import os
 import time
 
 import cv2
@@ -45,7 +46,8 @@ if __name__ == '__main__':
             #             visualizer.reset()
             #     pass
             # print("D: ", res["Loss_D"], ", G: ", res["Loss_G"], ",total: ", res["Loss_D"] + res["Loss_G"])
-            cv2.imwrite("test{}.png".format(i), (res["Target"][0].data.numpy().transpose([1, 2, 0]) + 0.5) * 255)
+            cv2.imwrite(os.path.join(opt.resume, "web", "images", "{}-{}.png".format(epoch, i)), (res["Target"][-1].data.numpy().transpose([1, 2, 0]) + 0.5) * 255)
+
         #     cv2.imwrite("testkp.png", res["Target"][0].transpose[1, 2, 0].data.numpy().sum(axis=-1) * 255)
     #
     #         # todo: add this.

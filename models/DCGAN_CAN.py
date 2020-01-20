@@ -86,6 +86,7 @@ class CANDiscriminator(nn.Module):
         )
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        # random_noise = torch.rand_like(inputs, requires_grad=False) * 0.001
         before_core = self.enter_act(self.enter(inputs))
         score = self.core(before_core)
         # print("Score", score.shape)
