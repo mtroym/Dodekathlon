@@ -27,7 +27,7 @@ if __name__ == '__main__':
     visualizer = Visualizer(opt)
     saver = Saver(opt)
     saver.latest()
-    for epoch in range(0, 1):
+    for epoch in range(0, opt.epochs):
         epoch_start_time = time.time()
         epoch_iter = 0
 
@@ -43,7 +43,7 @@ if __name__ == '__main__':
             #
             #             visualizer.reset()
             #     pass
-            print("D: ", res["Loss_D"], " ,G: ", res["Loss_G"])
+            print("D: ", res["Loss_D"], " ,G: ", res["Loss_G"], "total: ", res["Loss_D"] + res["Loss_G"])
             cv2.imwrite("test{}.png".format(i), (res["Target"][0].data.numpy().transpose([1, 2, 0]) + 0.5) * 255)
         #     cv2.imwrite("testkp.png", res["Target"][0].transpose[1, 2, 0].data.numpy().sum(axis=-1) * 255)
     #

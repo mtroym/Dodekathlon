@@ -103,8 +103,8 @@ class CANModel:
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and len(self.gpu_ids) > 0) else "cpu")
         self.dtype = torch.cuda.FloatTensor if self.device != torch.device("cpu") else torch.FloatTensor
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
-        self.discriminator = CANDiscriminator(opt.channel, num_class=2)
-        self.generator = CANGenerator(latent_dim=opt.latent_dim, hidden=opt.hidden)
+        self.discriminator = CANDiscriminator(opt.channel, num_class=2).to(self.device)
+        self.generator = CANGenerator(latent_dim=opt.latent_dim, hidden=opt.hidden).to(self.device)
         self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
         self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
         self.schedular_D = get_scheduler(self.optimizer_D, opt)
