@@ -1,14 +1,17 @@
 # coding=utf-8
+import os
+
+import cv2
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn import init
-import numpy as np
 import torch.nn.functional as F
 import torchvision.models as models
+from torch.nn import init
+
 from .blocks import ResnetDiscriminator
 from .helpers import get_norm_layer, get_scheduler
-import os
-import cv2
+
 
 def weights_init_normal(m):
     classname = m.__class__.__name__
@@ -44,7 +47,7 @@ def weights_init_kaiming(m):
 
 
 def init_weights(net, init_type='normal'):
-    print('initialization method [%s]' % init_type)
+    # print('initialization method [%s]' % init_type)
     if init_type == 'normal':
         net.apply(weights_init_normal)
     elif init_type == 'xavier':
@@ -313,10 +316,10 @@ class SynthesisNet(nn.Module):
         self.feat_nums[self.opt.pyramid_num - 1] = 0
         for i in range(self.opt.pyramid_num - 2, -1, -1):
             cur_module = nn.Sequential(
-                nn.Conv2d(pyramid_layer_nums[i+1] + self.feat_nums[i+1], self.feat_nums[i], kernel_size=3, stride=1, padding=1),
+                nn.Conv2d(pyramid_layer_nums[i + 1] + self.feat_nums[i + 1], self.feat_nums[i], kernel_size=3, stride=1, padding=1),
                 nn.BatchNorm2d(self.feat_nums[i]),
                 nn.ReLU(inplace=True),
-                nn.Conv2d(self.feat_nums[i], self.feat_nums[i], kernel_size=3, stride=1,padding=1),
+                nn.Conv2d(self.feat_nums[i], self.feat_nums[i], kernel_size=3, stride=1, padding=1),
                 nn.BatchNorm2d(self.feat_nums[i]),
                 nn.ReLU(inplace=True)
             )
@@ -329,7 +332,6 @@ class SynthesisNet(nn.Module):
         if len(opt.gpu_ids) and torch.cuda.is_available():
             self.img_syn = self.img_syn.cuda()
 
-
     def forward(self, warped_pyrs):
         # fusion the warped pyramids features
         last_f = warped_pyrs[-1]
@@ -339,6 +341,7 @@ class SynthesisNet(nn.Module):
 
         res_img = self.img_syn(last_f)
         return res_img
+
 
 class CTPSGenerator(nn.Module):
     '''
@@ -417,7 +420,7 @@ class CTPSGenerator(nn.Module):
 
     def warp_feats(self, GMMNet, source_parsing, source_kp, target_parsing, target_kp, source):
         # warp image and vgg features based on computed TPS layer, remember to keep size same
-        warped_sources, warped_masks = [], [target_parsing[:, 0:1, :, :],] # take the target mask to ignore the background diff loss
+        warped_sources, warped_masks = [], [target_parsing[:, 0:1, :, :], ]  # take the target mask to ignore the background diff loss
         for i in range(1, self.semantic):
             source_parsing_mask = torch.zeros_like(source_parsing).to(source_parsing)
             source_parsing_mask[:, i:i + 1, :, :] = 1
@@ -430,7 +433,7 @@ class CTPSGenerator(nn.Module):
             grid_i, theta_i = GMMNet(source_input_i, target_input_i)
             warped_source_i = F.grid_sample(source * source_parsing[:, i:i + 1, :, :], grid_i,
                                             padding_mode='border')
-            warped_mask_i = F.grid_sample(source_parsing[:, i:i+1, :, :], grid_i, mode='nearest', padding_mode='border')
+            warped_mask_i = F.grid_sample(source_parsing[:, i:i + 1, :, :], grid_i, mode='nearest', padding_mode='border')
             warped_sources.append(warped_source_i)
             warped_masks.append(warped_mask_i)
 
@@ -471,7 +474,7 @@ class CTPSGenerator(nn.Module):
         warped_src_pyrs, warped_parsing_pyrs = [], []
         for i in range(self.opt.pyramid_num):
             warped_src, warped_parsing = self.warp_feats(self.gmm_pyrs[i], source_parsing_pyrs[i], source_kp_pyrs[i],
-                                         target_parsing_pyrs[i], target_kp_pyrs[i], feat_pyrs[i])
+                                                         target_parsing_pyrs[i], target_kp_pyrs[i], feat_pyrs[i])
             warped_src_pyrs.append(warped_src)
             warped_parsing_pyrs.append(warped_parsing)
 
@@ -479,6 +482,7 @@ class CTPSGenerator(nn.Module):
         pred_trg = self.synthesis_net(warped_src_pyrs)
 
         return warped_parsing_pyrs, target_parsing_pyrs, pred_trg
+
 
 class CTPSDiscriminator(nn.Module):
     def __init__(self, opt, init_type='normal', norm="instance", dropout=0.5,
@@ -512,22 +516,24 @@ class CTPSDiscriminator(nn.Module):
         outputs["Pred"] = self.discr(torch.cat([source, source_kp, target, target_kp], dim=1))
         return outputs
 
+
 def make_vis(pred_target, warped_parsing_pyrs, target_parsing_pyrs, inputs):
     warped_parsing, target_parsing = warped_parsing_pyrs[0], target_parsing_pyrs[0]
     source_parsing = inputs["SourceParsing"]
 
-    import random; cur_sematic = random.choice(range(1, 20))
-    warped_parsing_i, target_parsing_i, source_parsing_i =\
-        warped_parsing[:, cur_sematic:cur_sematic+1, :, :], \
-        target_parsing[:, cur_sematic:cur_sematic+1, :, :], \
-        source_parsing[:, cur_sematic:cur_sematic+1, :, :]
+    import random;
+    cur_sematic = random.choice(range(1, 20))
+    warped_parsing_i, target_parsing_i, source_parsing_i = \
+        warped_parsing[:, cur_sematic:cur_sematic + 1, :, :], \
+        target_parsing[:, cur_sematic:cur_sematic + 1, :, :], \
+        source_parsing[:, cur_sematic:cur_sematic + 1, :, :]
 
     # show the warped result
     warped_parsing_i = (warped_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
     target_parsing_i = (target_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
     source_parsing_i = (source_parsing_i.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255
     warped_cat = np.concatenate([warped_parsing_i, target_parsing_i, source_parsing_i], 2)
-    warped_cat = np.concatenate([warped_cat,]*3, 3)
+    warped_cat = np.concatenate([warped_cat, ] * 3, 3)
 
     # show the image result
     fake = (pred_target.detach().cpu().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
@@ -541,10 +547,11 @@ def make_vis(pred_target, warped_parsing_pyrs, target_parsing_pyrs, inputs):
     source_kp = (source_kp.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
     target_kp = (target_kp.detach().cpu().numpy().transpose([0, 2, 3, 1])) * 255.
     kp_cat = np.concatenate([source_kp, target_kp, source_kp], 2)
-    kp_cat = np.concatenate([kp_cat, ]*3, 3)
+    kp_cat = np.concatenate([kp_cat, ] * 3, 3)
 
     total = np.concatenate([img_cat, warped_cat, kp_cat], 1)
     cv2.imwrite("test.png", total[0])
+
 
 class CTPSModel:
     def __init__(self, opt):
@@ -554,13 +561,13 @@ class CTPSModel:
         self.gener: CTPSGenerator = CTPSGenerator(opt)
         self.discr: CTPSDiscriminator = CTPSDiscriminator(opt)
         self.optimizer_G = torch.optim.Adam(filter(lambda p: p.requires_grad,
-                                                    self.gener.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999),
-                                                    eps=1e-08, weight_decay=1e-5)
+                                                   self.gener.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999),
+                                            eps=1e-08, weight_decay=1e-5)
         self.optimizer_D = torch.optim.Adam(self.discr.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
 
         self.schedulars_D = get_scheduler(self.optimizer_D, opt)
         self.schedular_G = get_scheduler(self.optimizer_G, opt)
-        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        self.save_dir = os.path.join(opt.checkpoints_dir, opt.expr_dir)
 
     def cuda(self):
         self.discr = self.discr.cuda()
@@ -585,6 +592,7 @@ class CTPSModel:
 
         make_vis(pred_target, warped_parsing_pyrs, target_parsing_pyrs, inputs)
         return loss_accum
+
 
 if __name__ == '__main__':
     gmm = GMM()

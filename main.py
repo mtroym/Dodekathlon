@@ -1,8 +1,5 @@
 import importlib
-import os
 import time
-
-import cv2
 
 from tools.Saver import Saver
 from tools.Visualizer import Visualizer
@@ -34,26 +31,11 @@ if __name__ == '__main__':
 
         for i, data in enumerate(dataloader):
             iter_start_time = time.time()
-            res = model.train_batch(inputs=data, loss=loss, metrics=metrics)
-            loss_log = "[{}/{}][{}/{}]".format(epoch, opt.epochs, i, len(dataloader)) + \
-                       '|'.join([' {}: {:.4f} '.format(k, v) for k, v in res.items() if k != "Target"])
-            print(loss_log)
-            # visualizer.display_current_results(res, epoch, save_result=True)
-            #
-            # for i, data in enumerate(dataloader_val):
-            #     iter_start_time
-            #
-            #             visualizer.reset()
-            #     pass
-            # print("D: ", res["Loss_D"], ", G: ", res["Loss_G"], ",total: ", res["Loss_D"] + res["Loss_G"])
-            cv2.imwrite(os.path.join(opt.resume, "web", "images", "{}-{}.png".format(epoch, i)), (res["Target"][-1].data.numpy().transpose([1, 2, 0]) + 0.5) * 255)
 
-        #     cv2.imwrite("testkp.png", res["Target"][0].transpose[1, 2, 0].data.numpy().sum(axis=-1) * 255)
-    #
-    #         # todo: add this.
-    #         model.set_input(data)
-    #         model.optimize_parameters()
-    #
+            res = model.train_batch(inputs=data, loss=loss, metrics=metrics)
+            visualizer.display_vis_loss(res, epoch, i + epoch * len(dataloader))
+            visualizer.print_current_errors(epoch, i, res["loss"], time.time() - iter_start_time)
+
     #         if epoch % opt.display_freq == 0:
     #             save_result = epoch % opt.update_html_freq == 0
     #             visualizer.display_current_results(model.get_current_visuals(), epoch, save_result)

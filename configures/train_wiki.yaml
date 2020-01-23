@@ -1,5 +1,5 @@
 train_settings:
-    lr: !!float 0.0005
+    lr: !!float 0.0001
     optimizer: Adam
     dataset: wikiart
     data_class:
@@ -12,7 +12,7 @@ train_settings:
     load_size: 256
     fine_size: 256
     refresh: TRUE
-    batchSize: 64
+    batchSize: 16
     dropout_rate: 0.5
     hidden: 1024
     beta1: 0.5

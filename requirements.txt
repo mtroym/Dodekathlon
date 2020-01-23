@@ -4,3 +4,4 @@ PyYaml
 visdom
 dominate
 opencv-python
+Tensorboard==2.1.0

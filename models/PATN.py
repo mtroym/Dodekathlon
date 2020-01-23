@@ -236,7 +236,7 @@ class PATNTransferModel:
         self.batch_size = opt.batchSize
         self.gpu_ids = opt.gpu_ids if opt.gpu_ids else []
         self.dtype = torch.cuda.FloatTensor if len(self.gpu_ids) != 0 else torch.FloatTensor
-        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        self.save_dir = os.path.join(opt.checkpoints_dir, opt.expr_dir)
         self.discr: PATNDiscriminator = PATNDiscriminator(opt, in_channel=self.opt.in_channel, hidden=self.opt.hidden)
         self.gener: PATNGenerator = PATNGenerator(opt, out_channel=self.opt.in_channel, hidden=self.opt.hidden)
         self.optimizers_D = [torch.optim.Adam(net.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))

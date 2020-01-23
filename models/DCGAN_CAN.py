@@ -11,7 +11,7 @@ import os
 import torch
 from torch import nn
 
-from models.helpers import get_scheduler, init_weights
+from models.helpers import init_weights
 
 
 class CANGenerator(nn.Module):
@@ -171,7 +171,7 @@ class CANModel:
         self.gpu_ids = opt.gpu_ids if opt.gpu_ids else []
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and len(self.gpu_ids) > 0) else "cpu")
         self.dtype = torch.cuda.FloatTensor if self.device != torch.device("cpu") else torch.FloatTensor
-        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        self.save_dir = opt.expr_dir
         if self.opt.fine_size == 256:
             self.discriminator = CANDiscriminator(opt.channel, num_class=2).to(self.device)
             self.generator = CANGenerator(latent_dim=opt.latent_dim, hidden=opt.hidden).to(self.device)
@@ -233,10 +233,10 @@ class CANModel:
         self.optimizer_D.step()
 
         with torch.no_grad():
-            fake = self.generator(self.fixed_noise).detach().cpu()
-            print(fake.shape)
+            fake = self.generator(self.fixed_noise)
 
-        return {"Target": fake, "Loss_G": err_g_d, "Loss_D": err_d}
+        return {"vis" : {"Target": fake, "Source": inputs["Source"]},
+                "loss": {"Loss_G": err_g_d, "Loss_D": err_d}}
 
 
 if __name__ == '__main__':
