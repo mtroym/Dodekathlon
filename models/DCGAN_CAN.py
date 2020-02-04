@@ -6,7 +6,6 @@
 @Date   :   2020/1/16
 @Desc   :   None
 """
-import os
 
 import torch
 from torch import nn
@@ -101,28 +100,44 @@ ndf = 64
 
 
 class Generator(nn.Module):
-    def __init__(self, ngpu):
+    def __init__(self, ngpu, u="trans"):
         super(Generator, self).__init__()
         self.ngpu = ngpu
+        self.trans = u == "trans"
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False) if self.trans else nn.Sequential(
+                nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
+                nn.Conv2d(nz, ngf * 8, 3, 1, 1, bias=False)
+            ),
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
             # state size. (ngf*8) x 4 x 4
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False) if self.trans else nn.Sequential(
+                nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
+                nn.Conv2d(ngf * 8, ngf * 4, 3, 1, 1, bias=False)
+            ),
             nn.BatchNorm2d(ngf * 4),
             nn.ReLU(True),
             # state size. (ngf*4) x 8 x 8
-            nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False) if self.trans else nn.Sequential(
+                nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
+                nn.Conv2d(ngf * 4, ngf * 2, 3, 1, 1, bias=False)
+            ),
             nn.BatchNorm2d(ngf * 2),
             nn.ReLU(True),
             # state size. (ngf*2) x 16 x 16
-            nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1, bias=False) if self.trans else nn.Sequential(
+                nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
+                nn.Conv2d(ngf * 2, ngf, 3, 1, 1, bias=False)
+            ),
             nn.BatchNorm2d(ngf),
             nn.ReLU(True),
             # state size. (ngf) x 32 x 32
-            nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False) if self.trans else nn.Sequential(
+                nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
+                nn.Conv2d(ngf, nc, 3, 1, 1, bias=False)
+            ),
             nn.Tanh()
             # state size. (nc) x 64 x 64
         )
@@ -178,7 +193,7 @@ class CANModel:
             self.fixed_noise = torch.randn(self.batch_size, self.opt.latent_dim, 1, 1).to(self.device)
         elif self.opt.fine_size == 64:
             self.discriminator = Discriminator(0)
-            self.generator = Generator(0)
+            self.generator = Generator(0, u="up+conv")
             self.fixed_noise = torch.randn((self.batch_size, nz, 1, 1)).to(self.device)
         self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
         self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -235,7 +250,7 @@ class CANModel:
         with torch.no_grad():
             fake = self.generator(self.fixed_noise)
 
-        return {"vis" : {"Target": fake, "Source": inputs["Source"]},
+        return {"vis": {"Target": fake, "Source": inputs["Source"]},
                 "loss": {"Loss_G": err_g_d, "Loss_D": err_d}}
 
 

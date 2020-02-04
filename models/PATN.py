@@ -219,11 +219,13 @@ class PATNDiscriminator(nn.Module):
         # return the predict if the fake is real in 2 directions.
         return outputs
 
-
+# for debug.
 def make_vis(fake_out, inputs):
     fake = (fake_out["FakeImage"].detach().numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
     gt = (inputs["Target"].numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
-    src = (inputs["Source"].numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
+    # mask = inputs["SourceParsing"][:, 19:20, :, :].numpy().transpose([0, 2, 3, 1])
+    mask = 1.0
+    src = mask * (inputs["Source"].numpy().transpose([0, 2, 3, 1]) + 1) / 2.0 * 255.0
     total = np.concatenate([fake, gt, src], 2)
     cv2.imwrite("test.png", total[0])
 
@@ -253,8 +255,7 @@ class PATNTransferModel:
 
     def train_batch(self, inputs: dict, loss: dict, metrics: dict) -> dict:
         loss_accum = {}
-        if "TargetParsing" in inputs:
-            print(inputs["TargetParsing"].shape)
+        # print(inputs["TargetParsing"].shape)
         # D:
         fake_out = self.gener(inputs)  # {"FakeImage": ...}
         self.optimizer_G.zero_grad()
