@@ -104,43 +104,48 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.ngpu = ngpu
         self.trans = u == "trans"
-        self.main = nn.Sequential(
-            # input is Z, going into a convolution
-            nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False) if self.trans else nn.Sequential(
-                nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
-                nn.Conv2d(nz, ngf * 8, 3, 1, 1, bias=False)
-            ),
-            nn.BatchNorm2d(ngf * 8),
-            nn.ReLU(True),
-            # state size. (ngf*8) x 4 x 4
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False) if self.trans else nn.Sequential(
-                nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
-                nn.Conv2d(ngf * 8, ngf * 4, 3, 1, 1, bias=False)
-            ),
-            nn.BatchNorm2d(ngf * 4),
-            nn.ReLU(True),
-            # state size. (ngf*4) x 8 x 8
-            nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False) if self.trans else nn.Sequential(
-                nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
-                nn.Conv2d(ngf * 4, ngf * 2, 3, 1, 1, bias=False)
-            ),
-            nn.BatchNorm2d(ngf * 2),
-            nn.ReLU(True),
-            # state size. (ngf*2) x 16 x 16
-            nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1, bias=False) if self.trans else nn.Sequential(
-                nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
-                nn.Conv2d(ngf * 2, ngf, 3, 1, 1, bias=False)
-            ),
-            nn.BatchNorm2d(ngf),
-            nn.ReLU(True),
-            # state size. (ngf) x 32 x 32
-            nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False) if self.trans else nn.Sequential(
-                nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
-                nn.Conv2d(ngf, nc, 3, 1, 1, bias=False)
-            ),
-            nn.Tanh()
-            # state size. (nc) x 64 x 64
-        )
+        layers = []
+        # x4
+        if self.trans:
+            layers += [nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False)]
+        else:
+            layers += [nn.UpsamplingBilinear2d(scale_factor=(4, 4)),
+                       nn.Conv2d(nz, ngf * 8, 3, 1, 1, bias=False)]
+        layers += [nn.BatchNorm2d(ngf * 8), nn.ReLU(True)]
+
+        # x8
+        if self.trans:
+            layers += [nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False)]
+        else:
+            layers += [nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
+                       nn.Conv2d(ngf * 8, ngf * 4, 3, 1, 1, bias=False)]
+        layers += [nn.BatchNorm2d(ngf * 4), nn.ReLU(True)]
+
+        # x16
+        if self.trans:
+            layers += [nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False)]
+        else:
+            layers += [nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
+                       nn.Conv2d(ngf * 4, ngf * 2, 3, 1, 1, bias=False)]
+        layers += [nn.BatchNorm2d(ngf * 2), nn.ReLU(True)]
+
+        # x32
+        if self.trans:
+            layers += [nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1, bias=False)]
+        else:
+            layers += [nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
+                       nn.Conv2d(ngf * 2, ngf, 3, 1, 1, bias=False)]
+        layers += [nn.BatchNorm2d(ngf), nn.ReLU(True)]
+
+        # x64
+        if self.trans:
+            layers += [nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False)]
+        else:
+            layers += [nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
+                       nn.Conv2d(ngf, nc, 3, 1, 1, bias=False)]
+        layers += [nn.Tanh()]
+
+        self.main = nn.Sequential(*layers)
 
     def forward(self, input):
         return self.main(input)
@@ -255,8 +260,12 @@ class CANModel:
 
 
 if __name__ == '__main__':
-    model = CANModel(None)
-"""
+    model = Generator(0, "up+conv")
+    random_noise = torch.randn((10, nz, 1, 1))
+    res = model(random_noise)
+    print(res.shape)
+
+    """
     import matplotlib.pyplot as plt
     import numpy as np
     torch.random.manual_seed(np.random.random(1))
