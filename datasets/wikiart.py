@@ -36,9 +36,14 @@ class ArtsDataset:
 
         # custom this from multiple datasets.
         if self.opt.dataset == "wikiart":
+            self.custom_transformation = transforms.Compose([
+                transforms.RandomRotation(180),
+                transforms.RandomRotation(90),
+            ])
             print("wikicustom transform setting..")
 
         self.preprocess = transforms.Compose([
+            self.custom_transformation,
             get_transform(opt),
         ])
 

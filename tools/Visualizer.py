@@ -116,11 +116,10 @@ class Visualizer:
 
     def display_vis_loss(self, res: dict, epochs: int, iters: int):
         for k, v in res["vis"].items():
-            img_grid = torchvision.utils.make_grid(v)
+            img_grid = torchvision.utils.make_grid((v + 1) / 2)
             self.writer.add_image(k, img_grid, global_step=epochs)
         for k, v in res["loss"].items():
             self.writer.add_scalar(k, v, iters)
-
 
     # errors: dictionary of error labels and values
     def plot_current_errors(self, epoch, counter_ratio, opt, errors):

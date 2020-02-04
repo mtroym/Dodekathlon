@@ -1,5 +1,5 @@
 train_settings:
-    lr: !!float 0.0001
+    lr: !!float 1.5e-4
     optimizer: Adam
     dataset: wikiart
     data_class:
@@ -9,8 +9,8 @@ train_settings:
     model: DCGAN_CAN
     epochs: !!int 100
     isTrain: TRUE
-    load_size: 256
-    fine_size: 256
+    load_size: 64
+    fine_size: 64
     refresh: TRUE
     batchSize: 16
     dropout_rate: 0.5
@@ -21,7 +21,8 @@ train_settings:
     loss:
         bce_loss: [1.0, BCE]
         nn_loss: [0.01, NNL]
-        mse_loss: [1.0, MSE]
+        mse_loss: [0.01, MSE]
+        gan_bce_loss: [5.0, BCE]
 
 test_settings:
     inference: TRUE

@@ -31,9 +31,9 @@ if __name__ == '__main__':
 
         for i, data in enumerate(dataloader):
             iter_start_time = time.time()
-
-            res = model.train_batch(inputs=data, loss=loss, metrics=metrics)
-            visualizer.display_vis_loss(res, epoch, i + epoch * len(dataloader))
+            niter = i + epoch * len(dataloader)
+            res = model.train_batch(inputs=data, loss=loss, metrics=metrics, niter=niter)
+            visualizer.display_vis_loss(res, epoch, niter)
             visualizer.print_current_errors(epoch, i, res["loss"], time.time() - iter_start_time)
 
     #         if epoch % opt.display_freq == 0:

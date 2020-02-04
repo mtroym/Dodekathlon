@@ -204,6 +204,7 @@ class CANModel:
         self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
         # self.schedular_D = get_scheduler(self.optimizer_D, opt)
         # self.schedular_G = get_scheduler(self.optimizer_G, opt)
+        self.time_g = 10
 
         init_weights(self.discriminator)
         init_weights(self.generator)
@@ -213,27 +214,31 @@ class CANModel:
         self.discriminator.type(self.dtype)
         self.generator.type(self.dtype)
 
-    def train_batch(self, inputs: dict, loss: dict, metrics: dict) -> dict:
+    def train_batch(self, inputs: dict, loss: dict, metrics: dict, niter: int = 0) -> dict:
         real = inputs["Source"].type(self.dtype)
         # real_label = inputs["Class"].type(self.dtype)
         # fake_label = torch.zeros((self.batch_size,), device=self.device).type(self.dtype)
 
         current_minibatch = real.shape[0]
-
-        self.optimizer_G.zero_grad()
         random_noise = None
         label = torch.full((current_minibatch,), 1).to(self.device)
-        if self.opt.fine_size == 256:
-            random_noise = torch.randn((current_minibatch, self.opt.latent_dim, 1, 1)).to(self.device)
-        elif self.opt.fine_size == 64:
-            random_noise = torch.randn((current_minibatch, nz, 1, 1)).to(self.device)
-        fake = self.generator(random_noise)
-        pred_fake = self.discriminator(fake)
-        label.fill_(1)
-        err_g = loss["bce_loss"](pred_fake, label)
-        err_g.backward()
-        err_g_d = float(err_g.mean().item())
-        self.optimizer_G.step()
+
+        err_g_d = 0
+        for _ in range(self.time_g):
+            self.optimizer_G.zero_grad()
+            if self.opt.fine_size == 256:
+                random_noise = torch.randn((current_minibatch, self.opt.latent_dim, 1, 1)).to(self.device)
+            elif self.opt.fine_size == 64:
+                random_noise = torch.randn((current_minibatch, nz, 1, 1)).to(self.device)
+            fake = self.generator(random_noise)
+            pred_fake = self.discriminator(fake)
+            label.fill_(1)
+            err_g = loss["gan_bce_loss"](pred_fake, label) + loss["mse_loss"](fake, real)
+            err_g.backward()
+            err_g_d += float(err_g.mean().item())
+            self.optimizer_G.step()
+
+        err_g_d /= self.time_g
 
         self.optimizer_D.zero_grad()
         # train with real label for D
@@ -250,13 +255,21 @@ class CANModel:
         err_d_fake.backward()
         err_d += float(err_d_fake.mean().item())
         # err_d.backward()
+        err_d /= 2
         self.optimizer_D.step()
 
         with torch.no_grad():
             fake = self.generator(self.fixed_noise)
 
-        return {"vis": {"Target": fake, "Source": inputs["Source"]},
-                "loss": {"Loss_G": err_g_d, "Loss_D": err_d}}
+        self.time_g = max(min(int(err_g_d / err_d), 10), 3)
+
+        return {"vis" : {"Target": fake, "Source": inputs["Source"]},
+                "loss": {"Loss_G"     : err_g_d, "Loss_D": err_d,
+                         "loss_d_fake": float(err_d_fake.mean().item()),
+                         "loss_d_real": float(err_d_real.mean().item()),
+                         "self.time_g": self.time_g
+                         }
+                }
 
 
 if __name__ == '__main__':
