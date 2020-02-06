@@ -10,6 +10,7 @@
 import torch
 from torch import nn
 
+from models.blocks.spectral_norm import SpectralNorm
 from models.helpers import init_weights
 
 
@@ -155,30 +156,43 @@ class Discriminator(nn.Module):
     def __init__(self, ngpu):
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
-        self.main = nn.Sequential(
-            # input is (nc) x 64 x 64
-            nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf) x 32 x 32
-            nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*2) x 16 x 16
-            nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*4) x 8 x 8
-            nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*8) x 4 x 4
-            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
-            nn.Sigmoid()
-        )
+        self.conv1 = SpectralNorm(nn.Conv2d(nc, ndf, 4, 2, 1, bias=False))
+        self.conv2 = SpectralNorm(nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False))
+        self.conv3 = SpectralNorm(nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False))
+        self.conv4 = SpectralNorm(nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False))
+        self.conv5 = SpectralNorm(nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False))
+        self.leak = 0.2
+
+        # self.main = nn.Sequential(
+        #     # input is (nc) x 64 x 64
+        #     nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
+        #     nn.LeakyReLU(0.2, inplace=True),
+        #     # state size. (ndf) x 32 x 32
+        #     nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
+        #     nn.BatchNorm2d(ndf * 2),
+        #     nn.LeakyReLU(0.2, inplace=True),
+        #     # state size. (ndf*2) x 16 x 16
+        #     nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
+        #     nn.BatchNorm2d(ndf * 4),
+        #     nn.LeakyReLU(0.2, inplace=True),
+        #     # state size. (ndf*4) x 8 x 8
+        #     nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
+        #     nn.BatchNorm2d(ndf * 8),
+        #     nn.LeakyReLU(0.2, inplace=True),
+        #     # state size. (ndf*8) x 4 x 4
+        #     nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+        #     nn.Sigmoid()
+        # )
 
     def forward(self, input_data):
         random_noise = torch.rand_like(input_data, requires_grad=False) * 0.001
-        return self.main(input_data + random_noise).flatten()
+        x = self.conv1(input_data + random_noise)
+        x = nn.LeakyReLU(self.leak)(self.conv2(x))
+        x = nn.LeakyReLU(self.leak)(self.conv3(x))
+        x = nn.LeakyReLU(self.leak)(self.conv4(x))
+        x = nn.LeakyReLU(self.leak)(self.conv5(x))
+        pred = torch.sigmoid(x)
+        return pred.flatten()
 
 
 class CANModel:
