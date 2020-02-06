@@ -229,7 +229,8 @@ class CANModel:
             if self.opt.fine_size == 256:
                 random_noise = torch.randn((current_minibatch, self.opt.latent_dim, 1, 1)).to(self.device)
             elif self.opt.fine_size == 64:
-                random_noise = torch.randn((current_minibatch, nz, 1, 1)).to(self.device)
+                # random_noise = torch.randn((current_minibatch, nz, 1, 1)).to(self.device)
+                random_noise = torch.softmax(torch.randn((current_minibatch, nz, 1, 1)), dim=1).to(self.device)
             fake = self.generator(random_noise)
             pred_fake = self.discriminator(fake)
             label.fill_(1)
@@ -263,13 +264,15 @@ class CANModel:
 
         self.time_g = max(min(int(err_g_d / err_d), 10), 3)
 
-        return {"vis" : {"Target": fake, "Source": inputs["Source"]},
-                "loss": {"Loss_G"     : err_g_d, "Loss_D": err_d,
-                         "loss_d_fake": float(err_d_fake.mean().item()),
-                         "loss_d_real": float(err_d_real.mean().item()),
-                         "self.time_g": self.time_g
-                         }
-                }
+        return {
+            "vis" : {"Target": fake,
+                     "Source": inputs["Source"]},
+            "loss": {"Loss_G"     : err_g_d,
+                     "Loss_D"     : err_d,
+                     "D_fake": float(err_d_fake.mean().item()),
+                     "D_real": float(err_d_real.mean().item()),
+                     "Time_G": self.time_g}
+        }
 
 
 if __name__ == '__main__':

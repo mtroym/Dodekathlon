@@ -21,7 +21,7 @@ train_settings:
     loss:
         bce_loss: [1.0, BCE]
         nn_loss: [0.01, NNL]
-        mse_loss: [0.01, MSE]
+        mse_loss: [0.5, MSE]
         gan_bce_loss: [5.0, BCE]
 
 test_settings:
