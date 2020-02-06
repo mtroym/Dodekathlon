@@ -261,4 +261,5 @@ pip-selfcheck.json
 
 ### custom ###
 checkpoints/
-/configures/deepfashion256.yaml
+configures
+!configures/configures_tmp
