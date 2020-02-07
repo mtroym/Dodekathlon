@@ -67,6 +67,7 @@ class BaseOptions:
         self.opt.__setattr__('expr_name', expr_name)
         self.opt.__setattr__('expr_dir', expr_dir)
         print("-> set tensorboard by: \n", "tensorboard --logdir {}".format(os.path.abspath(expr_dir)))
+        os.system("kill -9 $(ps axu | grep tensorboard | awk '{print $2}')")
         os.system("tensorboard --logdir {} &".format(os.path.abspath(expr_dir)))
         self.opt.__setattr__('data_gen', self.opt.checkpoints_dir)
         self.opt.__setattr__('resume', expr_dir)

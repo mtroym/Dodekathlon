@@ -65,6 +65,7 @@ loss_dict = {
     "L1" : nn.L1Loss(),
     "NNL": NNLoss(),
     "IOU": IOULoss(),
+    "WST": lambda pred_r, pred_f: - torch.mean(pred_r) + torch.mean(pred_f)  # wasserstein loss
 }
 
 

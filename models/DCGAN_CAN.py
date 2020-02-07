@@ -10,6 +10,7 @@
 import torch
 from torch import nn
 
+from models.blocks.gradient_penalty import calculate_gradient_penatly
 from models.blocks.spectral_norm import SpectralNorm
 from models.helpers import init_weights
 
@@ -108,9 +109,9 @@ class Generator(nn.Module):
         layers = []
         # x4
         if self.trans:
-            layers += [nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False)]
+            layers += [nn.ConvTranspose2d(nz, ngf * 8, 4, 2, 1, bias=False)]
         else:
-            layers += [nn.UpsamplingBilinear2d(scale_factor=(4, 4)),
+            layers += [nn.UpsamplingBilinear2d(scale_factor=(2, 2)),
                        nn.Conv2d(nz, ngf * 8, 3, 1, 1, bias=False)]
         layers += [nn.BatchNorm2d(ngf * 8), nn.ReLU(True)]
 
@@ -155,36 +156,38 @@ class Generator(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, ngpu):
         super(Discriminator, self).__init__()
-        self.ngpu = ngpu
-        self.conv1 = SpectralNorm(nn.Conv2d(nc, ndf, 4, 2, 1, bias=False))
-        self.conv2 = SpectralNorm(nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False))
-        self.conv3 = SpectralNorm(nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False))
-        self.conv4 = SpectralNorm(nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False))
-        self.conv5 = SpectralNorm(nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False))
-        self.leak = 0.2
+        # self.norm = SpectralNorm if True else nn.BatchNorm2d()
+        # self.ngpu = ngpu
+        # self.conv1 = SpectralNorm(nn.Conv2d(nc, ndf, 4, 2, 1, bias=False))
+        # self.conv2 = SpectralNorm(nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False))
+        # self.conv3 = SpectralNorm(nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False))
+        # self.conv4 = SpectralNorm(nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False))
+        # self.conv5 = SpectralNorm(nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False))
+        # self.leak = 0.2
 
-        # self.main = nn.Sequential(
-        #     # input is (nc) x 64 x 64
-        #     nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
-        #     nn.LeakyReLU(0.2, inplace=True),
-        #     # state size. (ndf) x 32 x 32
-        #     nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
-        #     nn.BatchNorm2d(ndf * 2),
-        #     nn.LeakyReLU(0.2, inplace=True),
-        #     # state size. (ndf*2) x 16 x 16
-        #     nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
-        #     nn.BatchNorm2d(ndf * 4),
-        #     nn.LeakyReLU(0.2, inplace=True),
-        #     # state size. (ndf*4) x 8 x 8
-        #     nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
-        #     nn.BatchNorm2d(ndf * 8),
-        #     nn.LeakyReLU(0.2, inplace=True),
-        #     # state size. (ndf*8) x 4 x 4
-        #     nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
-        #     nn.Sigmoid()
-        # )
+        self.main = nn.Sequential(
+            # input is (nc) x 64 x 64
+            nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf) x 32 x 32
+            nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 2),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*2) x 16 x 16
+            nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 4),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*4) x 8 x 8
+            nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(ndf * 8),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*8) x 4 x 4
+            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
+            nn.Sigmoid()
+        )
 
     def forward(self, input_data):
+        """
         random_noise = torch.rand_like(input_data, requires_grad=False) * 0.001
         x = self.conv1(input_data + random_noise)
         x = nn.LeakyReLU(self.leak)(self.conv2(x))
@@ -192,6 +195,8 @@ class Discriminator(nn.Module):
         x = nn.LeakyReLU(self.leak)(self.conv4(x))
         x = nn.LeakyReLU(self.leak)(self.conv5(x))
         pred = torch.sigmoid(x)
+        """
+        pred = self.main(input_data)
         return pred.flatten()
 
 
@@ -212,13 +217,14 @@ class CANModel:
             self.fixed_noise = torch.randn(self.batch_size, self.opt.latent_dim, 1, 1).to(self.device)
         elif self.opt.fine_size == 64:
             self.discriminator = Discriminator(0)
-            self.generator = Generator(0, u="up+conv")
+            self.generator = Generator(0, u="trans")
             self.fixed_noise = torch.randn((self.batch_size, nz, 1, 1)).to(self.device)
         self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
         self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
         # self.schedular_D = get_scheduler(self.optimizer_D, opt)
         # self.schedular_G = get_scheduler(self.optimizer_G, opt)
         self.time_g = 10
+        self.time_d = 1
 
         init_weights(self.discriminator)
         init_weights(self.generator)
@@ -228,64 +234,61 @@ class CANModel:
         self.discriminator.type(self.dtype)
         self.generator.type(self.dtype)
 
+    def gen_random_noise(self, current_minibatch):
+        random_noise = None
+        if self.opt.fine_size == 256:
+            random_noise = torch.randn((current_minibatch, self.opt.latent_dim, 1, 1)).to(self.device)
+        elif self.opt.fine_size == 64:
+            # random_noise = torch.randn((current_minibatch, nz, 1, 1)).to(self.device)
+            random_noise = torch.softmax(torch.randn((current_minibatch, nz * 4)), dim=1).to(self.device)
+            random_noise = random_noise.view((current_minibatch, nz, 2, 2))
+        return random_noise
+
     def train_batch(self, inputs: dict, loss: dict, metrics: dict, niter: int = 0) -> dict:
         real = inputs["Source"].type(self.dtype)
         # real_label = inputs["Class"].type(self.dtype)
         # fake_label = torch.zeros((self.batch_size,), device=self.device).type(self.dtype)
 
         current_minibatch = real.shape[0]
-        random_noise = None
-        label = torch.full((current_minibatch,), 1).to(self.device)
-
-        err_g_d = 0
-        for _ in range(self.time_g):
-            self.optimizer_G.zero_grad()
-            if self.opt.fine_size == 256:
-                random_noise = torch.randn((current_minibatch, self.opt.latent_dim, 1, 1)).to(self.device)
-            elif self.opt.fine_size == 64:
-                # random_noise = torch.randn((current_minibatch, nz, 1, 1)).to(self.device)
-                random_noise = torch.softmax(torch.randn((current_minibatch, nz, 1, 1)), dim=1).to(self.device)
-            fake = self.generator(random_noise)
-            pred_fake = self.discriminator(fake)
-            label.fill_(1)
-            err_g = loss["gan_bce_loss"](pred_fake, label) + loss["mse_loss"](fake, real)
-            err_g.backward()
-            err_g_d += float(err_g.mean().item())
-            self.optimizer_G.step()
-
-        err_g_d /= self.time_g
-
+        # label = torch.full((current_minibatch,), 1).to(self.device)
+        err_d_sum = 0
         self.optimizer_D.zero_grad()
-        # train with real label for D
-        pred_real = self.discriminator(real)
-        label.fill_(1)
-        err_d_real = loss["bce_loss"](pred_real, label)
-        err_d_real.backward()
-        err_d = float(err_d_real.mean().item())
-
-        # train with fake label for D
-        pred_fake = self.discriminator(fake.detach())
-        label.fill_(0)
-        err_d_fake = loss["bce_loss"](pred_fake, label)
-        err_d_fake.backward()
-        err_d += float(err_d_fake.mean().item())
-        # err_d.backward()
-        err_d /= 2
+        for _ in range(self.time_d):
+            # train with real label for D
+            random_noise = self.gen_random_noise(current_minibatch)
+            fake = self.generator(random_noise)
+            pred_real = self.discriminator(real)
+            pred_fake = self.discriminator(fake)
+            # label.fill_(1)
+            gradient_penalty = calculate_gradient_penatly(self.discriminator, real.data, fake.data, self.device)
+            err_d = loss["w_loss"](pred_real, pred_fake) + gradient_penalty
+            err_d.backward()
+            err_d_sum += float(err_d.mean())
         self.optimizer_D.step()
+        err_d_mean = err_d_sum / self.time_d
+        # for _ in range(self.time_g):
+
+
+        self.optimizer_G.zero_grad()
+        random_noise = self.gen_random_noise(current_minibatch)
+        fake = self.generator(random_noise)
+        pred_fake = self.discriminator(fake)
+        err_g = torch.mean(pred_fake)
+        err_g.backward()
+        self.optimizer_G.step()
 
         with torch.no_grad():
             fake = self.generator(self.fixed_noise)
 
-        self.time_g = max(min(int(err_g_d / err_d), 10), 3)
-
         return {
             "vis" : {"Target": fake,
                      "Source": inputs["Source"]},
-            "loss": {"Loss_G"     : err_g_d,
-                     "Loss_D"     : err_d,
-                     "D_fake": float(err_d_fake.mean().item()),
-                     "D_real": float(err_d_real.mean().item()),
-                     "Time_G": self.time_g}
+            "loss": {"Loss_G": err_g,
+                     "Loss_D": err_d_mean,
+                     # "D_fake": float(err_d_fake.mean().item()),
+                     # "D_real": float(err_d_real.mean().item()),
+                     # "Time_G": self.time_g
+                     }
         }
 
 
