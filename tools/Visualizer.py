@@ -13,6 +13,8 @@ from torch.utils.tensorboard import SummaryWriter
 from tools import html
 from utils import util
 
+logging.getLogger('PIL').setLevel(logging.INFO)
+
 
 class Visualizer:
     def __init__(self, opt):
@@ -131,7 +133,7 @@ class Visualizer:
             X=np.stack([np.array(self.plot_data['X'])] * len(self.plot_data['legend']), 1),
             Y=np.array(self.plot_data['Y']),
             opts={
-                'title' : self.name + ' over time',
+                'title': self.name + ' over time',
                 'legend': self.plot_data['legend'],
                 'xlabel': 'epoch',
                 'ylabel': 'loss'},

@@ -1,0 +1,6 @@
+base_dir: /Users/tony/Develop/data/close_btn/  # data dir of deepfashion origin data download from website.
+image_dir: image  # data dir of deepfashion origin data download from website.
+split_dir: split
+shuffle: TRUE
+channel: 3
+btn_path: datasets/btn.png

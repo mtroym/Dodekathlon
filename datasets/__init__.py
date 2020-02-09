@@ -1,9 +1,11 @@
 from torch.utils.data import DataLoader
 
 from datasets.base import BaseDataset
+from datasets.close_btn import CloseButton
 from datasets.keypoint import KeypointDataset
 from datasets.keypoint_parsing import KeypointParsingDataset
 from datasets.wikiart import ArtsDataset
+
 
 def create_dataset(opt):
     dataset = None
@@ -13,6 +15,8 @@ def create_dataset(opt):
         dataset = KeypointDataset(opt)
     elif opt.dataset in ["wikiart", "painting", "Rothko"]:
         dataset = ArtsDataset(opt)
+    elif opt.dataset in ["close_btn"]:
+        dataset = CloseButton(opt)
     return dataset
 
 

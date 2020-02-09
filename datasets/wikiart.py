@@ -10,7 +10,6 @@ import os
 
 import torch
 import torchvision.transforms as transforms
-import torch.nn.functional as F
 import yaml
 from PIL import Image
 

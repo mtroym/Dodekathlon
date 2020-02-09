@@ -1,6 +1,8 @@
 import importlib
 import time
 
+from tqdm import tqdm
+
 from tools.Saver import Saver
 from tools.Visualizer import Visualizer
 
@@ -29,9 +31,14 @@ if __name__ == '__main__':
         epoch_start_time = time.time()
         epoch_iter = 0
 
-        for i, data in enumerate(dataloader):
+        for i, data in tqdm(enumerate(dataloader)):
             iter_start_time = time.time()
             niter = i + epoch * len(dataloader)
+
+            # check if dataloader is right.
+            # visualizer.display_vis_loss({"vis": {"Source": data["Source"]},
+            #                              "loss": {}}, epoch, niter)
+
             res = model.train_batch(inputs=data, loss=loss, metrics=metrics, niter=niter)
             visualizer.display_vis_loss(res, epoch, niter)
             visualizer.print_current_errors(epoch, i, res["loss"], time.time() - iter_start_time)
