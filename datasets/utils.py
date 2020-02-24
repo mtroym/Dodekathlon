@@ -25,6 +25,12 @@ def get_transform(opt):
         transform_list.append(transforms.Lambda(
             lambda img: __scale_width(img, opt.load_size)))
         transform_list.append(transforms.RandomCrop(opt.fine_size))
+        # pass
+    elif opt.resize_or_crop == 'scale_and_crop':
+        transform_list.append(transforms.Lambda(
+            lambda img: __scale(img, opt.load_size)
+        ))
+        transform_list.append(transforms.RandomCrop(opt.fine_size))
 
     transform_list += [transforms.ToTensor(),
                        transforms.Normalize((0.5, 0.5, 0.5),
@@ -39,3 +45,19 @@ def __scale_width(img, target_width):
     w = target_width
     h = int(target_width * oh / ow)
     return img.resize((w, h), Image.BICUBIC)
+
+
+def __scale_height(img, target_height):
+    ow, oh = img.size
+    if oh == target_height:
+        return img
+    w = int(target_height * ow / oh)
+    h = target_height
+    return img.resize((w, h), Image.BICUBIC)
+
+def __scale(img, target_side):
+    ow, oh = img.size
+    if ow < oh:
+        return __scale_width(img, target_side)
+    else:
+        return __scale_height(img, target_side)

@@ -26,7 +26,7 @@ if __name__ == '__main__':
     opt, dataloader, model, loss, metrics = init_all()
     visualizer = Visualizer(opt)
     saver = Saver(opt)
-    saver.latest()
+    # saver.latest()
     for epoch in range(0, opt.epochs):
         epoch_start_time = time.time()
         epoch_iter = 0
@@ -39,7 +39,7 @@ if __name__ == '__main__':
             # visualizer.display_vis_loss({"vis": {"Source": data["Source"]},
             #                              "loss": {}}, epoch, niter)
 
-            res = model.train_batch(inputs=data, loss=loss, metrics=metrics, niter=niter)
+            res = model.train_batch(inputs=data, loss=loss, metrics=metrics, niter=niter, epoch=epoch)
             visualizer.display_vis_loss(res, epoch, niter)
             visualizer.print_current_errors(epoch, i, res["loss"], time.time() - iter_start_time)
 

@@ -41,6 +41,7 @@ class BaseOptions:
         self.parser.add_argument('--no_html', type=bool, default=False, help='configure files.')
         self.parser.add_argument('--save_epoch', type=int, default=10, help='epochs to save.')
         self.parser.add_argument('--display_single_pane_ncols', type=int, default=4, help='display_single_pane_ncols')
+        self.parser.add_argument('--resume_path', type=str, default=None, help='restore path')
         self.opt = self.parser.parse_args()
         # down-sampling times
         self.initialized = True
@@ -61,16 +62,16 @@ class BaseOptions:
             print('%s: %s' % (str(k), str(v)))
         print('-------------- End ----------------')
         # save to the disk
-        time_str = time.strftime("Trail#%j%H%M%S", time.localtime(time.time()))
+        time_str = time.strftime("#%m-%d-%H", time.localtime(time.time()))
         expr_name = '-'.join([self.opt.model, self.opt.dataset, str(self.opt.lr), self.opt.optimizer, self.opt.suffix, time_str])
         expr_dir = os.path.join(self.opt.checkpoints_dir, self.opt.task_name, expr_name)
         self.opt.__setattr__('expr_name', expr_name)
         self.opt.__setattr__('expr_dir', expr_dir)
         print("-> set tensorboard by: \n", "tensorboard --logdir {}".format(os.path.abspath(expr_dir)))
-        os.system("kill -9 $(ps axu | grep tensorboard | awk '{print $2}')")
+        os.system("kill -9 $(ps axu | grep " + os.path.abspath(expr_dir) + " | awk '{print $2}')")
         os.system("tensorboard --logdir {} &".format(os.path.abspath(expr_dir)))
         self.opt.__setattr__('data_gen', self.opt.checkpoints_dir)
-        self.opt.__setattr__('resume', expr_dir)
+        # self.opt.__setattr__('resume', expr_dir)
         util.make_dirs(expr_dir)
         file_name = os.path.join(expr_dir, 'opt.txt')
         with open(file_name, 'wt') as opt_file:

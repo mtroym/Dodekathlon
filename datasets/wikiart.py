@@ -36,7 +36,7 @@ class ArtsDataset:
         # custom this from multiple datasets.
         if self.opt.dataset == "wikiart":
             self.transforms = transforms.Compose([
-                transforms.RandomVerticalFlip(p=0.5),
+                # transforms.RandomVerticalFlip(p=0.5),
                 transforms.RandomHorizontalFlip(p=0.5),
                 transforms.ColorJitter()
             ])
@@ -91,11 +91,16 @@ class ArtsDataset:
         for k, v in self.data_info.items():
             self.__setattr__(k, v)
         # out of save...
-        if self.subclass != "all":
-            subclass_label = self.get_label_index(self.cate, self.subclass)
-            self.data_list = [name_label for name_label in self.data_info[self.cate][split] if name_label[1] == subclass_label]
+
+        if isinstance(self.subclass, list):
+            subclass_labels = [self.get_label_index(self.cate, subc) for subc in self.subclass]
+            self.data_list = [name_label for name_label in self.data_info[self.cate][split] if name_label[1] in subclass_labels]
         else:
-            self.data_list = self.data_info[self.cate][split]
+            if self.subclass != "all":
+                subclass_label = self.get_label_index(self.cate, self.subclass)
+                self.data_list = [name_label for name_label in self.data_info[self.cate][split] if name_label[1] == subclass_label]
+            else:
+                self.data_list = self.data_info[self.cate][split]
 
         print("=> Total num of {}ing pairs: {}".format(self.split, self.__len__()))
 
