@@ -10,7 +10,7 @@ from tools.Visualizer import Visualizer
 def init_all():
     print("=> initializing. parsing arguments.")
     opts = importlib.import_module('options.custom-options')
-    opt_init = opts.TrainOptions().opt
+    opt_init = opts.CustomOptions().opt
 
     data_lib = importlib.import_module('datasets')
     models_lib = importlib.import_module('models')
@@ -38,10 +38,21 @@ if __name__ == '__main__':
             # check if dataloader is right.
             # visualizer.display_vis_loss({"vis": {"Source": data["Source"]},
             #                              "loss": {}}, epoch, niter)
-
-            res = model.train_batch(inputs=data, loss=loss, metrics=metrics, niter=niter, epoch=epoch)
-            visualizer.display_vis_loss(res, epoch, niter)
-            visualizer.print_current_errors(epoch, i, res["loss"], time.time() - iter_start_time)
+            if opt.mode == "train":
+                res = model.train_batch(inputs=data, loss=loss, metrics=metrics, niter=niter, epoch=epoch)
+                if niter % 20 != 0:
+                    visualizer.display_vis_loss({
+                        "vis": {},
+                        "loss": res["loss"]
+                    }, epoch, niter)
+                else:
+                    visualizer.display_vis_loss(res, epoch, niter)
+                visualizer.print_current_errors(epoch, i, res["loss"], time.time() - iter_start_time)
+            elif opt.mode == "test":
+                pass
+            elif opt.mode == "predict":
+                res = model.predict_batch(inputs=data, loss=None, metrics=None, niter=None, epoch=None)
+                visualizer.display_vis_loss(res, epoch, niter)
 
     #         if epoch % opt.display_freq == 0:
     #             save_result = epoch % opt.update_html_freq == 0
