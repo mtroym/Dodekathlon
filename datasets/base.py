@@ -1,6 +1,10 @@
 import torch.utils.data as data
 from PIL import Image
 
+# from datasets.close_btn import CloseButton
+# from datasets.keypoint import KeypointDataset
+# from datasets.keypoint_parsing import KeypointParsingDataset
+# from datasets.wikiart import ArtsDataset
 Image.MAX_IMAGE_PIXELS = 1000000000
 
 

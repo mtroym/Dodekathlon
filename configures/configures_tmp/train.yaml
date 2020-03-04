@@ -1,3 +1,4 @@
+mode: train
 train_settings:
     lr: !!float 0.001
     optimizer: Adam

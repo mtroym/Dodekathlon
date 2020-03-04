@@ -4,7 +4,6 @@ import os
 import random
 import uuid
 
-import cv2
 import numpy as np
 import requests
 import torch
@@ -86,7 +85,7 @@ class CloseButton:
             'RGBA').split()[-1], Image.new("L", btn_size, 0), 0.2)
         _img.paste(btn, (coor_c, coor_r), mask=btn_alpha)
         return _img, {"Coordinates": np.array([(coor_c + btn_side / 2) / side, (coor_r + btn_side / 2) / side,
-                                              btn_side / side, btn_side / side])}
+                                               btn_side / side, btn_side / side])}
 
     def _get_one(self, idx):
         # mapping to path.
@@ -109,7 +108,7 @@ def gen_list():
     save_path_list = "/Users/tony/Develop/data/close_btn/"
     save_path = os.path.join(save_path_list, "img")
     gen_status = mp.Manager().dict()
-    n_procs = 8
+    n_procs = 32
     queue = mp.Queue()
     results = mp.Queue()
 
@@ -169,21 +168,101 @@ def gen_list():
         mp_run(val_list, split, func)
 
 
+def gen_labeled_data():
+    btn_path = ""
+    label_base_dir = "/mnt/cephfs_new_wj/lab_ad_idea/maoyiming/data/close_btn/labels"
+    base_dir = "/mnt/cephfs_new_wj/lab_ad_idea/maoyiming/data/close_btn/image"
+    gen_status = mp.Manager().dict()
+    n_procs = 32
+    queue = mp.Queue()
+
+    def mp_run(data_list, func):
+        for data in data_list:
+            queue.put(data)
+
+        mp_pools = []
+        for _ in range(n_procs):
+            mp_t = mp.Process(target=func, args=(queue, label_base_dir))
+            mp_pools.append(mp_t)
+            mp_t.start()
+
+        my_bar = progbar(len(data_list), width=30)
+        while True:
+            sum_cnt = sum([gen_status[pid] for pid in gen_status.keys()])
+            my_bar.update(sum_cnt)
+            if sum_cnt == len(data_list):
+                break
+
+    def func(queue, label_base_path):
+        while not queue.empty():
+            try:
+                url = queue.get()
+                do_one(str(os.path.join(base_dir, url)), label_base_path)
+                pid = os.getpid()
+                gen_status[pid] = 1 if not pid in gen_status.keys() else gen_status[pid] + 1
+            except Exception as ex:
+                print(str(ex))
+                break
+
+    def blend_btn(_img, area):
+        w, h = _img.size
+        random_scale = 1 + (random.randint(0, 100) - 50) / 200  # scale in[0.75, 1.25]
+        btn_side = int(w * .12 * random_scale)
+        btn_size = (btn_side, btn_side)
+        btn = Image.new("L", btn_size, random.randint(240, 255))
+        coor_r = random.randint(int(area[0] * h), int(area[1] * h - btn_side))
+        coor_c = random.randint(int(area[2] * w), int(area[3] * w - btn_side))
+
+        random_idx = random.randint(0, 21)
+        btn_path = os.path.join("/mnt/cephfs_new_wj/lab_ad_idea/maoyiming/code/gans/datasets/btn", "{}.png".format(random_idx))
+        btn_alpha = Image.blend(Image.open(open(btn_path, "rb")).resize(btn_size).convert(
+            'RGBA').split()[-1], Image.new("L", btn_size, 0), 0.2)
+        _img.paste(btn, (coor_c, coor_r), mask=btn_alpha)
+        return _img, [(coor_c + btn_side / 2) / w, (coor_r + btn_side / 2) / h, btn_side / w, btn_side / h]
+
+    def do_one(image_path, label_base_path):
+        print(image_path)
+        image = Image.open(image_path, 'r').convert('RGB')
+        image = image.resize((720, 1280))
+        label_all = []
+        pose_all = [[0, 0.5, 0, 0.5], [0.5, 1, 0, 0.5], [0, 0.5, 0.5, 1], [0.5, 1, 0.5, 1]]
+        if random.random() < 0.333:
+            image = image.point(lambda p: p * 0.80)
+            for pos in pose_all:
+                if random.random() < 0.5:
+                    image, coor = blend_btn(image, pos)
+                    label_all.append([0] + coor)
+        image_blent = image
+        image_blent.save(image_path.replace("image", "images"))
+        label_path = os.path.join(label_base_path, image_path.split("/")[-1].split(".")[0] + ".txt")
+        label_str = ""
+        if len(label_all) != 0:
+            label_str = "\n".join([" ".join(map(str, label)) for label in label_all])
+        # print(label_str)
+        with open(label_path, "w") as f:
+            f.write(label_str)
+            f.close()
+
+    path_list = os.listdir(base_dir)
+    mp_run(path_list, func)
+
+
 if __name__ == '__main__':
+    gen_labeled_data()
     # gen_list()
-    btn_path = "/Users/tony/PycharmProjects/pytorch-train/datasets/btn.png"
-    btn_temp = cv2.imread(btn_path, cv2.IMREAD_UNCHANGED)
-    btn_temp = cv2.resize(btn_temp, (50, 50))[:, :, -1]
-    # [:, :, -1]
-
-    test_path = "/Users/tony/PycharmProjects/pytorch-train/datasets/test.jpeg"
-    test_out = "/Users/tony/PycharmProjects/pytorch-train/datasets/test_out.jpeg"
-
-    img = Image.open(open(test_path, 'rb'), "RGB")
-    img.paste(btn_temp, (0, 0))
-    img.save(test_out)
-
-    print(btn_temp.shape)
+    # btn_path = "/Users/tony/PycharmProjects/pytorch-train/datasets/btn.png"
+    # btn_temp = cv2.imread(btn_path, cv2.IMREAD_UNCHANGED)
+    # btn_temp = cv2.resize(btn_temp, (50, 50))[:, :, -1]
+    # # [:, :, -1]
+    #
+    # test_path = "/Users/tony/PycharmProjects/pytorch-train/datasets/test.jpeg"
+    # test_out = "/Users/tony/PycharmProjects/pytorch-train/datasets/test_out.jpeg"
+    #
+    # img = Image.open(open(test_path, 'rb'), "RGB")
+    # img.paste(btn_temp, (0, 0))
+    # img.save(test_out)
+    #
+    # print(btn_temp.shape)
     # print("done")
     # handle_data(train_list,"train")
     # handle_data(val_list, "val")

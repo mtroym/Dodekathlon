@@ -15,33 +15,83 @@ class _Generator(nn.Module):
     def __init__(self, nz=100, ngf=160, nc=3, init_type="normal"):
         super(_Generator, self).__init__()
         self.init_type = init_type
+        self.normfunc = nn.BatchNorm2d
         self.model = nn.Sequential(OrderedDict([
             # ----- layer 1
             ("conv1", nn.ConvTranspose2d(in_channels=nz, out_channels=ngf * 16, kernel_size=4, stride=1, padding=0, bias=False)),
-            ("bn1", nn.BatchNorm2d(num_features=ngf * 16)),
+            ("bn1", self.normfunc(num_features=ngf * 16)),
             ("relu1", nn.ReLU(inplace=True)),
 
             # ----- layer 2
             ("conv2", nn.ConvTranspose2d(in_channels=ngf * 16, out_channels=ngf * 8, kernel_size=4, stride=2, padding=1, bias=False)),
-            ("bn2", nn.BatchNorm2d(num_features=ngf * 8)),
+            ("bn2", self.normfunc(num_features=ngf * 8)),
             ("relu2", nn.ReLU(inplace=True)),
 
             # ----- layer 3
             ("conv3", nn.ConvTranspose2d(in_channels=ngf * 8, out_channels=ngf * 4, kernel_size=4, stride=2, padding=1, bias=False)),
-            ("bn3", nn.BatchNorm2d(num_features=ngf * 4)),
+            ("bn3", self.normfunc(num_features=ngf * 4)),
             ("relu3", nn.ReLU(inplace=True)),
 
             # ----- layer 4
             ("conv4", nn.ConvTranspose2d(in_channels=ngf * 4, out_channels=ngf * 2, kernel_size=4, stride=2, padding=1, bias=False)),
-            ("bn4", nn.BatchNorm2d(num_features=ngf * 2)),
+            ("bn4", self.normfunc(num_features=ngf * 2)),
             ("relu4", nn.ReLU(inplace=True)),
 
             # ----- layer 5
             ("conv5", nn.ConvTranspose2d(in_channels=ngf * 2, out_channels=ngf, kernel_size=4, stride=2, padding=1, bias=False)),
-            ("bn5", nn.BatchNorm2d(num_features=ngf)),
+            ("bn5", self.normfunc(num_features=ngf)),
             ("relu5", nn.ReLU(inplace=True)),
 
             ("conv6", nn.ConvTranspose2d(in_channels=ngf, out_channels=nc, kernel_size=4, stride=2, padding=1, bias=False)),
+            ("tanh", nn.Tanh()),
+        ]))
+        # self.model.apply()
+
+    def init_param(self):
+        init_weights(self.model, self.init_type)
+
+    def forward(self, inputs):
+        return self.model(inputs)
+
+
+class _Generator_ResizeConv(nn.Module):
+    def __init__(self, nz=100, ngf=160, nc=3, init_type="normal"):
+        super(_Generator_ResizeConv, self).__init__()
+        self.init_type = init_type
+        self.normfunc = nn.BatchNorm2d
+        self.model = nn.Sequential(OrderedDict([
+            # ----- layer 1
+            ("unsample1", nn.UpsamplingBilinear2d(scale_factor=2)),
+            ("conv1", nn.Conv2d(in_channels=nz, out_channels=ngf * 16, kernel_size=3, stride=1, padding=1, bias=False)),
+            ("bn1", self.normfunc(num_features=ngf * 16)),
+            ("relu1", nn.ReLU(inplace=True)),
+
+            # ----- layer 2
+            ("unsample2", nn.UpsamplingBilinear2d(scale_factor=4)),
+            ("conv2", nn.Conv2d(in_channels=ngf * 16, out_channels=ngf * 8, kernel_size=3, stride=1, padding=1, bias=False)),
+            ("bn2", self.normfunc(num_features=ngf * 8)),
+            ("relu2", nn.ReLU(inplace=True)),
+
+            # ----- layer 3
+            ("unsample3", nn.UpsamplingBilinear2d(scale_factor=2)),
+            ("conv3", nn.Conv2d(in_channels=ngf * 8, out_channels=ngf * 4, kernel_size=3, stride=1, padding=1, bias=False)),
+            ("bn3", self.normfunc(num_features=ngf * 4)),
+            ("relu3", nn.ReLU(inplace=True)),
+
+            # ----- layer 4
+            ("unsample4", nn.UpsamplingBilinear2d(scale_factor=2)),
+            ("conv4", nn.Conv2d(in_channels=ngf * 4, out_channels=ngf * 2, kernel_size=3, stride=1, padding=1, bias=False)),
+            ("bn4", self.normfunc(num_features=ngf * 2)),
+            ("relu4", nn.ReLU(inplace=True)),
+
+            # ----- layer 5
+            ("unsample5", nn.UpsamplingBilinear2d(scale_factor=2)),
+            ("conv5", nn.Conv2d(in_channels=ngf * 2, out_channels=ngf, kernel_size=3, stride=1, padding=1, bias=False)),
+            ("bn5", self.normfunc(num_features=ngf)),
+            ("relu5", nn.ReLU(inplace=True)),
+
+            ("unsample6", nn.UpsamplingBilinear2d(scale_factor=2)),
+            ("conv6", nn.Conv2d(in_channels=ngf, out_channels=nc, kernel_size=3, stride=1, padding=1, bias=False)),
             ("tanh", nn.Tanh()),
         ]))
         # self.model.apply()
@@ -57,30 +107,31 @@ class _Discriminator(nn.Module):
     def __init__(self, ndf=40, nc=3, init_type="normal"):
         super(_Discriminator, self).__init__()
         self.init_type = init_type
+        self.normfunc = nn.BatchNorm2d
         self.model = nn.Sequential(OrderedDict([
             # ------- layer 1
             ("conv1", nn.Conv2d(in_channels=nc, out_channels=ndf, kernel_size=4, stride=2, padding=1)),
-            ("bn1", nn.BatchNorm2d(num_features=ndf)),
+            ("bn1", self.normfunc(num_features=ndf)),
             ("lrelu1", nn.LeakyReLU(negative_slope=0.2, inplace=True)),
 
             # ------- layer 2
             ("conv2", nn.Conv2d(in_channels=ndf, out_channels=ndf * 2, kernel_size=4, stride=2, padding=1)),
-            ("bn2", nn.BatchNorm2d(num_features=ndf * 2)),
+            ("bn2", self.normfunc(num_features=ndf * 2)),
             ("lrelu2", nn.LeakyReLU(negative_slope=0.2, inplace=True)),
 
             # ------- layer 3
             ("conv3", nn.Conv2d(in_channels=ndf * 2, out_channels=ndf * 4, kernel_size=4, stride=2, padding=1)),
-            ("bn3", nn.BatchNorm2d(num_features=ndf * 4)),
+            ("bn3", self.normfunc(num_features=ndf * 4)),
             ("lrelu3", nn.LeakyReLU(negative_slope=0.2, inplace=True)),
 
             # ------- layer 4
             ("conv4", nn.Conv2d(in_channels=ndf * 4, out_channels=ndf * 8, kernel_size=4, stride=2, padding=1)),
-            ("bn4", nn.BatchNorm2d(num_features=ndf * 8)),
+            ("bn4", self.normfunc(num_features=ndf * 8)),
             ("lrelu4", nn.LeakyReLU(negative_slope=0.2, inplace=True)),
 
             # ------- layer 5
             ("conv5", nn.Conv2d(in_channels=ndf * 8, out_channels=ndf * 16, kernel_size=4, stride=2, padding=1)),
-            ("bn5", nn.BatchNorm2d(num_features=ndf * 16)),
+            ("bn5", self.normfunc(num_features=ndf * 16)),
             ("lrelu5", nn.LeakyReLU(negative_slope=0.2, inplace=True)),
 
             # ------- layer 6
@@ -112,7 +163,8 @@ class DCGANModel:
             self.nz = 100
 
         self.discriminator = _Discriminator(ndf=self.ndf, nc=self.in_channel, init_type=self.init_type).to(self.device)
-        self.generator = _Generator(nz=self.nz, ngf=self.ngf, nc=self.in_channel, init_type=self.init_type).to(self.device)
+        # self.generator = _Generator(nz=self.nz, ngf=self.ngf, nc=self.in_channel, init_type=self.init_type).to(self.device)
+        self.generator = _Generator_ResizeConv(nz=self.nz, ngf=self.ngf, nc=self.in_channel, init_type=self.init_type).to(self.device)
         self.optimizer_d = torch.optim.Adam(self.discriminator.parameters(), lr=self.opt.lr, betas=(self.opt.beta1, 0.999))
         self.optimizer_g = torch.optim.Adam(self.generator.parameters(), lr=self.opt.lr, betas=(self.opt.beta1, 0.999))
         if self.opt.resume_path is not None:
@@ -125,6 +177,8 @@ class DCGANModel:
         self.current_minibatch = self.opt.batchSize
         self.fixed_noise = self.gen_noise()
         self.cuda()
+        if self.opt.resume_path is not None:
+            self.load_model(self.opt.resume_path)
 
     def cuda(self):
         self.discriminator.cuda(self.device)
@@ -180,8 +234,19 @@ class DCGANModel:
                              "Source": inputs["Source"]},
                      "loss": {"loss_d": loss_d,
                               "loss_g": loss_g}}
-        self.save_model(epoch, store=store_val)
+        if epoch % 30 == 5:
+            self.save_model(epoch, store=store_val)
         return store_val
+
+    def predict_batch(self, inputs: dict, loss=None, metrics=None, niter=None, epoch=None):
+        self.current_minibatch = self.opt.batchSize
+        noise = self.gen_noise()
+        with torch.no_grad():
+            fake = self.generator(noise)
+        return {
+            "vis": {"Target": fake},
+            "loss": {}
+        }
 
     def save_model(self, epoch, store):
         store_dict = {
@@ -192,19 +257,24 @@ class DCGANModel:
             },
             "optimizer_state_dict": {
                 "discriminator_optimizer_state_dict": self.optimizer_d.state_dict(),
-                "generator_optimizer_state_dict": self.optimizer_d.state_dict()
+                "generator_optimizer_state_dict": self.optimizer_g.state_dict()
             }
         }
         store_dict.update(store)
         torch.save(store_dict, os.path.join(self.opt.expr_dir, "epoch_{}.pth".format(epoch)))
         torch.save(store_dict, os.path.join(self.opt.expr_dir, "latest.pth".format(epoch)))
 
-    def load_model(self, store_path):
+    def load_model(self, store_path, no_opt=False):
         store_dict = torch.load(store_path)
         self.discriminator.load_state_dict(store_dict["model_state_dict"]["discriminator_model_state_dict"])
         self.generator.load_state_dict(store_dict["model_state_dict"]["generator_model_state_dict"])
+        if no_opt:
+            return
         self.optimizer_d.load_state_dict(store_dict["optimizer_state_dict"]["discriminator_optimizer_state_dict"])
-        self.optimizer_g.load_state_dict(store_dict["optimizer_state_dict"]["generator_optimizer_state_dict"])
+        try:
+            self.optimizer_g.load_state_dict(store_dict["optimizer_state_dict"]["generator_optimizer_state_dict"])
+        except:
+            pass
 
 
 if __name__ == '__main__':
@@ -213,7 +283,7 @@ if __name__ == '__main__':
     num_z = 100
     image = torch.rand((bs, 3, w, h))
     z = torch.rand((bs, num_z, 1, 1))
-    g = _Generator()
+    g = _Generator_ResizeConv()
     d = _Discriminator()
     fak = g(z)
     print(fak.shape)

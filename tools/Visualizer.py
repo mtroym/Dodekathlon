@@ -4,6 +4,7 @@ import ntpath
 import os
 import time
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torchvision
@@ -119,6 +120,7 @@ class Visualizer:
     def display_vis_loss(self, res: dict, epochs: int, iters: int):
         for k, v in res["vis"].items():
             img_grid = torchvision.utils.make_grid((v + 1) / 2)
+            # cv2.imwrite(os.path.join(self.opt.expr_dir, "{}.png".format(iters)), img_grid.cpu().numpy().transpose([1, 2, 0])[:, :, ::-1] * 255)
             self.writer.add_image(k, img_grid, global_step=epochs)
         for k, v in res["loss"].items():
             self.writer.add_scalar(k, v, iters)

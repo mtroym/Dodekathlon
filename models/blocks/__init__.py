@@ -11,6 +11,10 @@ import functools
 import torch
 from torch import nn
 
+from .adaptive_instance_normalization import AdaptiveInstanceNorm2d
+from .gradient_penalty import calculate_gradient_penatly
+from .layer_normalization import LayerNorm
+from .spectral_norm import SpectralNorm
 
 # Define a resnet block
 class ResnetBlock(nn.Module):

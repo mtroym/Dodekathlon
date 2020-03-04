@@ -1,3 +1,6 @@
+import copy
+from collections import OrderedDict
+
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -60,3 +63,48 @@ class VGG(nn.Module):
         out['r54'] = F.relu(self.conv5_4(out['r53']))
         out['p5'] = self.pool5(out['r54'])
         return [out[key] for key in out_keys]
+
+
+def rename_sequential(m: nn.Module) -> nn.Module:
+    """
+    make name/id correspond to paper.
+    :param m:
+    :return:
+    """
+    num_conv = 1
+    num_bn = 1
+    num_relu = 1
+    num_pool = 1
+    model_named = []
+    for layer in list(m):
+        layer_repr = repr(layer)
+        if "Conv2d" in layer_repr:
+            new_name = "conv{}_{}".format(num_pool, num_conv)
+            num_conv += 1
+        elif "Pad" in layer_repr:
+            new_name = "pad{}_{}".format(num_pool, num_conv)
+        elif "BatchNorm2d" in layer_repr:
+            new_name = "bn{}_{}".format(num_pool, num_bn)
+            num_bn += 1
+        elif "ReLU" in layer_repr:
+            new_name = "relu{}_{}".format(num_pool, num_relu)
+            num_relu += 1
+        elif "LeakyReLU" in layer_repr:
+            new_name = "lrelu{}_{}".format(num_pool, num_relu)
+            num_relu += 1
+        elif "Pool" in layer_repr:
+            new_name = "pool{}".format(num_pool, num_relu)
+            num_pool += 1
+            num_bn = 1
+            num_conv = 1
+            num_relu = 1
+        elif "Upsampling" in layer_repr:
+            new_name = "up{}".format(num_pool, num_relu)
+            num_pool += 1
+            num_bn = 1
+            num_conv = 1
+            num_relu = 1
+        else:
+            new_name = "Unkown"
+        model_named.append((new_name, copy.deepcopy(layer)))
+    return nn.Sequential(OrderedDict(model_named))
