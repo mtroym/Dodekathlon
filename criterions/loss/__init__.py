@@ -3,6 +3,7 @@ import torch.nn as nn
 
 from .DefGan_loss import NNLoss, IOULoss
 from .adain_loss import style_loss_dict, content_loss, style_loss
+from .total_variation_loss import TVLoss
 
 loss_dict = {
     "MSE": nn.MSELoss(),
@@ -13,7 +14,8 @@ loss_dict = {
     "WST": lambda pred_r, pred_f: - torch.mean(pred_r) + torch.mean(pred_f),  # wasserstein loss
     "adain_content": content_loss,
     "adain_style_dict": style_loss_dict,
-    "adain_style": style_loss
+    "adain_style": style_loss,
+    "TVL": TVLoss(),
 }
 
 

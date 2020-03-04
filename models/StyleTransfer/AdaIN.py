@@ -47,7 +47,7 @@ class _Encoder(nn.Module):
         results = OrderedDict()
         for name, layer in self.core.named_children():
             inputs = layer(inputs)
-            if inputs in self.feature_hook:
+            if name in self.feature_hook:
                 results[name] = inputs
         return results
 
@@ -62,18 +62,19 @@ class _Decoder(nn.Module):
         for name, layer in enc.core.named_children():
             if 'conv' in name:
                 in_channels, out_channels = layer.in_channels, layer.out_channels
-                core_list.append(("pad{}".format(name.replace("conv", "")),
-                                  nn.ReflectionPad2d(padding=(1, 1, 1, 1))))
-                core_list.append(("conv{}".format(name.replace("conv", "")),
-                                  nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1)))
                 core_list.append((activation + name.replace("conv", ""),
                                   nonlinear_act(inplace=True)))
+                core_list.append(("conv{}".format(name.replace("conv", "")),
+                                  nn.Conv2d(out_channels, in_channels, kernel_size=3, stride=1)))
+                core_list.append(("pad{}".format(name.replace("conv", "")),
+                                  nn.ReflectionPad2d(padding=(1, 1, 1, 1))))
+
             if 'pool' in name:
                 core_list.append(("up{}".format(name.replace("pool", "")),
                                   nn.UpsamplingNearest2d(scale_factor=2)))
 
-        self.core = rename_sequential(nn.Sequential(OrderedDict(reversed(core_list))))
-        print(self.core)
+        self.core = rename_sequential(nn.Sequential(OrderedDict(reversed(core_list[1:]))))
+        # print(self)
 
     def forward(self, inputs) -> torch.Tensor:
         return self.core(inputs)
@@ -106,31 +107,44 @@ class Model:
             self.load_model(self.opt.resume_path)
 
     def train_decoder(self, content, style, alpha=1.0):
+        self.optimizer.zero_grad()
+
+        # find all the features with frozen VGG
         style_features = self.encoder(style)
         content_latent = self.encoder(content, feature_hook=["relu4_1"])
+
+        # Find adain
         trans_content = self.adain(content=content_latent["relu4_1"],
                                    style=style_features["relu4_1"])
-        interpolate_latent = (1 - alpha) * content_latent["relu4_1"] + \
+        interpolate_latent = (1.0 - alpha) * content_latent["relu4_1"] + \
                              alpha * trans_content
+
         transferred_image = self.decoder(interpolate_latent)
         transferred_features = self.encoder(transferred_image, feature_hook=["relu4_1"])
 
         c_loss = self.loss["content_loss"](transferred_features["relu4_1"], interpolate_latent)
         s_loss = self.loss["style_loss"](transferred_features, style_features)
-        return c_loss, s_loss, transferred_image
+        smooth_reg = self.loss["smooth_reg"](transferred_image)
+        loss = c_loss.mean() + s_loss.mean() + smooth_reg.mean()
+        loss.backward()
+        self.optimizer.step()
+        return c_loss, s_loss, smooth_reg, transferred_image
 
     def train_batch(self, inputs: dict, loss: dict, metrics: dict, niter: int = 0, epoch: int = 0) -> dict:
         self.inputs = inputs
         self.loss = loss if self.loss is None else self.loss
         self.metrics = metrics if self.metrics is None else self.metrics
         self.current_minibatch = inputs["Source"].shape[0]
-        c_loss, s_loss, transferred_image = self.train_decoder(inputs["Source"], inputs["Style"])
+        c_loss, s_loss, smooth_reg, transferred_image = self.train_decoder(inputs["Source"], inputs["Style"])
 
         store_val = {"vis": {"Target": transferred_image,
                              "Source": inputs["Source"],
                              "Style": inputs["Style"]},
                      "loss": {"loss_content": c_loss,
-                              "loss_style": s_loss}}
+                              "loss_style": s_loss,
+                              "smooth_reg": smooth_reg,
+                              }
+                     }
         if epoch % 30 == 5:
             self.save_model(epoch, store=store_val)
         return store_val
@@ -165,17 +179,17 @@ class Model:
 
 
 if __name__ == '__main__':
-    bs = 2
-    w, h = 64, 64
-    num_z = 100
+    bs = 10
+    w, h = 128, 128
     image = torch.rand((bs, 3, w, h))
-    z = torch.rand((bs, num_z, 1, 1))
     # g = _Generator_ResizeConv()
     e = _Encoder()
-    print(e)
     d = _Decoder(e)
-    print(e(image).shape)
-    print(d(e(image)).shape)
+    adain = AdaptiveInstanceNorm2d(e.out_channels)
+    te = adain(e(image)["relu4_1"], e(image)["relu4_1"])
+    print(d(te).shape)
+    # print(e(image).shape)
+    # print(d(e(image)).shape)
     # print(.out_channels)
     # fak = g(z)
     # print(fak.shape)
