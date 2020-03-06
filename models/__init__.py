@@ -2,6 +2,7 @@ from models.CAN import CANModel
 from models.GANzoo.DCGAN import DCGANModel
 from models.GMM import CTPSModel
 from models.PATN import PATNTransferModel
+from models.StyleTransfer.AdaIN import AdaIN
 from models.base import BaseModel
 
 
@@ -17,6 +18,8 @@ def create_model(opt):
         model = CANModel(opt)
     elif opt.model == 'DCGAN':
         model = DCGANModel(opt)
+    elif opt.model == "AdaIN":
+        model = AdaIN(opt)
     else:
         raise ValueError("Model [%s] not recognized." % opt.model)
 

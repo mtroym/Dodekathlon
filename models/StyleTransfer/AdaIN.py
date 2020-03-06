@@ -21,7 +21,7 @@ class _Encoder(nn.Module):
         super(_Encoder, self).__init__()
         self.init_type = init_type
         self.pretrained = pretrained
-        self.feature_hook = ["relu1_1", "relu2_1", "relu3_1", "relu4_1"]
+        self.feature_hook = ["relu1_1", "relu2_1", "relu3_1", "relu4_1"] if feature_hook is None else feature_hook
         self.core = nn.Sequential()
         backbone = vgg19(pretrained=pretrained, progress=True)
         feature_extractor = rename_sequential(backbone.features)
@@ -43,7 +43,9 @@ class _Encoder(nn.Module):
         for param in self.core.parameters():
             param.requires_grad = False
 
-    def forward(self, inputs):
+    def forward(self, inputs, feature_hook=None):
+        if feature_hook is not None:
+            self.feature_hook = feature_hook
         results = OrderedDict()
         for name, layer in self.core.named_children():
             inputs = layer(inputs)
@@ -80,7 +82,7 @@ class _Decoder(nn.Module):
         return self.core(inputs)
 
 
-class Model:
+class AdaIN:
     def __init__(self, opt):
         self.name = "AdaIN-Style model"
         self.opt = opt

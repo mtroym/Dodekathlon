@@ -1,0 +1,26 @@
+mode: train
+train_settings:
+    lr: !!float 0.0002
+    optimizer: Adam
+    dataset: wikiart
+    resize_or_crop: scale_and_crop
+    data_class:
+        class: genre
+        subclass: landscape
+    model: DCGAN
+    epochs: !!int 100
+    isTrain: TRUE
+    load_size: 128
+    fine_size: 128
+    refresh: TRUE
+    batchSize: 16
+    beta1: 0.5
+    lr_policy: plateau
+    latent_dim: 100
+    include_class: FALSE
+    loss:
+        bce_loss_g: [1.0, BCE]
+        bce_loss_d: [1.0, BCE]
+
+test_settings:
+    inference: TRUE

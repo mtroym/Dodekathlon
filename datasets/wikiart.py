@@ -24,7 +24,7 @@ class ArtsDataset:
         self.opt = opt
         # set out space params.
         self.data_info_path = os.path.join(self.opt.data_gen, self.opt.dataset + "_{}_info.pth.tar".format(split))
-        self.configure = yaml.load(open(os.path.join(self.opt.configure_path, self.opt.dataset + '.yaml'), 'r'))
+        self.configure = yaml.load(open(os.path.join(self.opt.configure_path, 'wikiart.yaml'), 'r'))
 
         for k, v in self.configure.items():
             # self.opt.__setattr__('in_channel', self.configure['channel'])
@@ -34,7 +34,7 @@ class ArtsDataset:
         self.subclass = self.opt.data_class["subclass"]
 
         # custom this from multiple datasets.
-        if self.opt.dataset == "wikiart":
+        if self.opt.dataset == "wikiart" or self.opt.dataset == "duel":
             self.transforms = transforms.Compose([
                 # transforms.RandomVerticalFlip(p=0.5),
                 transforms.RandomHorizontalFlip(p=0.5),

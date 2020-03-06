@@ -1,0 +1,29 @@
+mode: train
+train_settings:
+    lr: !!float 0.0002
+    optimizer: Adam
+    dataset: duel
+    data_class:
+        class: genre
+        subclass: landscape
+
+    resize_or_crop: scale_and_crop
+
+    model: AdaIN
+    epochs: !!int 100
+    isTrain: TRUE
+    load_size: 128
+    fine_size: 128
+    refresh: TRUE
+    batchSize: 16
+    beta1: 0.5
+    lr_policy: plateau
+    latent_dim: 100
+    include_class: FALSE
+    alpha: 1.0
+    loss:
+        style_loss: [10.0, "adain_style_dict"]
+        content_loss: [1.0, "adain_content"]
+
+test_settings:
+    inference: TRUE

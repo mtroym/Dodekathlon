@@ -21,4 +21,5 @@ def style_loss(source: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
 def style_loss_dict(source: dict, target: dict):
     union_keys = set(source.keys()).intersection(set(target.keys()))
     loss = [style_loss(source[key], target[key]).mean() for key in union_keys]
-    return torch.cat(loss).mean()
+    # print(loss)
+    return torch.cat(loss).mean() if len(loss) > 1 else loss[0]
