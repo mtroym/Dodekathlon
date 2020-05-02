@@ -86,6 +86,9 @@ def rename_sequential(m: nn.Module) -> nn.Module:
         elif "BatchNorm2d" in layer_repr:
             new_name = "bn{}_{}".format(num_pool, num_bn)
             num_bn += 1
+        elif "InstanceNorm2d" in layer_repr:
+            new_name = "in{}_{}".format(num_pool, num_bn)
+            num_bn += 1
         elif "ReLU" in layer_repr:
             new_name = "relu{}_{}".format(num_pool, num_relu)
             num_relu += 1

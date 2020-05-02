@@ -1,4 +1,5 @@
 import importlib
+import os
 import time
 
 from tqdm import tqdm
@@ -27,9 +28,20 @@ if __name__ == '__main__':
     visualizer = Visualizer(opt)
     saver = Saver(opt)
     # saver.latest()
+    resume = os.path.dirname(opt.resume_path)
     for epoch in range(0, opt.epochs):
         epoch_start_time = time.time()
         epoch_iter = 0
+
+        if opt.mode == "predict":
+            model.load_model(store_path=os.path.join(resume, f"epoch_{epoch * 4}.pth"))
+            res = model.predict_batch(inputs=None, loss=None, metrics=None, niter=None, epoch=None)
+            visualizer.display_vis_loss(res, epoch, epoch)
+            continue
+        if opt.mode == "onnx":
+            model.load_model(store_path=os.path.join(resume, "latest.pth"))
+            res = model.frozen_onnx(resume)
+            break
 
         for i, data in tqdm(enumerate(dataloader)):
             iter_start_time = time.time()
@@ -50,9 +62,8 @@ if __name__ == '__main__':
                 visualizer.print_current_errors(epoch, i, res["loss"], time.time() - iter_start_time)
             elif opt.mode == "test":
                 pass
-            elif opt.mode == "predict":
-                res = model.predict_batch(inputs=data, loss=None, metrics=None, niter=None, epoch=None)
-                visualizer.display_vis_loss(res, epoch, niter)
+            else:
+                pass
 
     #         if epoch % opt.display_freq == 0:
     #             save_result = epoch % opt.update_html_freq == 0

@@ -163,8 +163,8 @@ class DCGANModel:
             self.nz = 100
 
         self.discriminator = _Discriminator(ndf=self.ndf, nc=self.in_channel, init_type=self.init_type).to(self.device)
-        # self.generator = _Generator(nz=self.nz, ngf=self.ngf, nc=self.in_channel, init_type=self.init_type).to(self.device)
-        self.generator = _Generator_ResizeConv(nz=self.nz, ngf=self.ngf, nc=self.in_channel, init_type=self.init_type).to(self.device)
+        self.generator = _Generator(nz=self.nz, ngf=self.ngf, nc=self.in_channel, init_type=self.init_type).to(self.device)
+        # self.generator = _Generator_ResizeConv(nz=self.nz, ngf=self.ngf, nc=self.in_channel, init_type=self.init_type).to(self.device)
         self.optimizer_d = torch.optim.Adam(self.discriminator.parameters(), lr=self.opt.lr, betas=(self.opt.beta1, 0.999))
         self.optimizer_g = torch.optim.Adam(self.generator.parameters(), lr=self.opt.lr, betas=(self.opt.beta1, 0.999))
         if self.opt.resume_path is not None:
@@ -215,10 +215,37 @@ class DCGANModel:
 
     def gen_noise(self):
         if self.opt.fine_size == 128:
-            noise = torch.randn((self.current_minibatch, self.nz, 1, 1)).to(self.device)
+            if self.opt.mode == "predict":
+                self.current_minibatch = 64
+                if False:
+                    noise_1 = torch.randn((self.nz)).to(self.device)
+                    noise_2 = torch.randn((self.nz)).to(self.device)
+                    alpha = torch.linspace(0, 1, self.current_minibatch).view(self.current_minibatch, 1).to(self.device)
+                    print(alpha.shape, noise_1.shape)
+                    noise = alpha * noise_1 + (1 - alpha) * noise_2
+                    print(noise.shape)
+                else:
+                    noise = torch.randn((self.current_minibatch, self.nz)).to(self.device)
+            elif self.opt.mode == "onnx":
+                self.current_minibatch = self.opt.batchSize
+                noise = torch.randn((self.current_minibatch, self.nz)).to(self.device)
+            else:
+                noise = torch.randn((self.current_minibatch, self.nz)).to(self.device)
         else:
             raise NotImplementedError("The fine size is not supported")
-        return noise
+        return noise.view(self.current_minibatch, self.nz, 1, 1)
+
+    def frozen_onnx(self, path=None):
+        dummy_input = self.gen_noise()
+        input_names = ["input_z"]
+        output_names = ["predict"]
+        print(path)
+        torch.onnx.export(self.generator,
+                          dummy_input,
+                          os.path.join(path, "export.onnx"),
+                          verbose=True, input_names=input_names,
+                          output_names=output_names)
+
 
     def train_batch(self, inputs: dict, loss: dict, metrics: dict, niter: int = 0, epoch: int = 0) -> dict:
         self.inputs = inputs
@@ -240,9 +267,8 @@ class DCGANModel:
 
     def predict_batch(self, inputs: dict, loss=None, metrics=None, niter=None, epoch=None):
         self.current_minibatch = self.opt.batchSize
-        noise = self.gen_noise()
         with torch.no_grad():
-            fake = self.generator(noise)
+            fake = self.generator(self.fixed_noise)
         return {
             "vis": {"Target": fake},
             "loss": {}
@@ -275,6 +301,7 @@ class DCGANModel:
             self.optimizer_g.load_state_dict(store_dict["optimizer_state_dict"]["generator_optimizer_state_dict"])
         except:
             pass
+        del store_dict
 
 
 if __name__ == '__main__':

@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 from torchvision.models import vgg19
 
+from datasets.utils import denorm
 from models.blocks import AdaptiveInstanceNorm2d
 from models.blocks.vgg import rename_sequential
 from models.helpers import init_weights
@@ -44,12 +45,12 @@ class _Encoder(nn.Module):
             param.requires_grad = False
 
     def forward(self, inputs, feature_hook=None):
-        if feature_hook is not None:
-            self.feature_hook = feature_hook
+        if feature_hook is None:
+            feature_hook = self.feature_hook
         results = OrderedDict()
         for name, layer in self.core.named_children():
             inputs = layer(inputs)
-            if name in self.feature_hook:
+            if name in feature_hook:
                 results[name] = inputs
         return results
 
@@ -66,6 +67,8 @@ class _Decoder(nn.Module):
                 in_channels, out_channels = layer.in_channels, layer.out_channels
                 core_list.append((activation + name.replace("conv", ""),
                                   nonlinear_act(inplace=True)))
+                # core_list.append(("in{}".format(name.replace("conv", "")),
+                #                   nn.InstanceNorm2d(num_features=in_channels)))
                 core_list.append(("conv{}".format(name.replace("conv", "")),
                                   nn.Conv2d(out_channels, in_channels, kernel_size=3, stride=1)))
                 core_list.append(("pad{}".format(name.replace("conv", "")),
@@ -75,7 +78,7 @@ class _Decoder(nn.Module):
                 core_list.append(("up{}".format(name.replace("pool", "")),
                                   nn.UpsamplingNearest2d(scale_factor=2)))
 
-        self.core = rename_sequential(nn.Sequential(OrderedDict(reversed(core_list[1:]))))
+        self.core = rename_sequential(nn.Sequential(OrderedDict(reversed(core_list))))
         # print(self)
 
     def forward(self, inputs) -> torch.Tensor:
@@ -93,7 +96,8 @@ class AdaIN:
         self.dtype = torch.cuda.FloatTensor if self.device != torch.device("cpu") else torch.FloatTensor
         self.save_dir = opt.expr_dir
         self.encoder = _Encoder()
-        self.encoder.frozen()
+        if self.opt.freeze_enc:
+            self.encoder.frozen()
         self.decoder = _Decoder(self.encoder)
         self.adain = AdaptiveInstanceNorm2d(num_features=self.encoder.out_channels)
         self.optimizer = torch.optim.Adam(self.decoder.parameters(), lr=self.opt.lr, betas=(self.opt.beta1, 0.999))
@@ -103,10 +107,16 @@ class AdaIN:
         self.inputs = None
         self.loss = None
         self.metrics = None
-        self.label: torch.Tensor() = None
         self.current_minibatch = self.opt.batchSize
         if self.opt.resume_path is not None:
             self.load_model(self.opt.resume_path)
+        self.cuda()
+
+    def cuda(self):
+        if torch.cuda.is_available():
+            self.encoder.cuda(self.device)
+            self.decoder.cuda(self.device)
+            self.adain.cuda(self.device)
 
     def train_decoder(self, content, style, alpha=1.0):
         self.optimizer.zero_grad()
@@ -122,7 +132,7 @@ class AdaIN:
                              alpha * trans_content
 
         transferred_image = self.decoder(interpolate_latent)
-        transferred_features = self.encoder(transferred_image, feature_hook=["relu4_1"])
+        transferred_features = self.encoder(transferred_image)
 
         c_loss = self.loss["content_loss"](transferred_features["relu4_1"], interpolate_latent)
         s_loss = self.loss["style_loss"](transferred_features, style_features)
@@ -137,11 +147,11 @@ class AdaIN:
         self.loss = loss if self.loss is None else self.loss
         self.metrics = metrics if self.metrics is None else self.metrics
         self.current_minibatch = inputs["Source"].shape[0]
-        c_loss, s_loss, smooth_reg, transferred_image = self.train_decoder(inputs["Source"], inputs["Style"])
-
-        store_val = {"vis": {"Target": transferred_image,
-                             "Source": inputs["Source"],
-                             "Style": inputs["Style"]},
+        c_loss, s_loss, smooth_reg, transferred_image = self.train_decoder(inputs["Source"].to(self.device),
+                                                                           inputs["Style"].to(self.device))
+        store_val = {"vis": {"Target": denorm(transferred_image, self.device, to_board=True),
+                             "Source": denorm(inputs["Source"], self.device, to_board=True),
+                             "Style": denorm(inputs["Style"], self.device, to_board=True)},
                      "loss": {"loss_content": c_loss,
                               "loss_style": s_loss,
                               "smooth_reg": smooth_reg,
@@ -189,6 +199,7 @@ if __name__ == '__main__':
     d = _Decoder(e)
     adain = AdaptiveInstanceNorm2d(e.out_channels)
     te = adain(e(image)["relu4_1"], e(image)["relu4_1"])
+    print(d)
     print(d(te).shape)
     # print(e(image).shape)
     # print(d(e(image)).shape)

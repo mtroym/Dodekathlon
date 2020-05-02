@@ -3,12 +3,12 @@ import torch.nn.functional as F
 
 
 def content_loss(source: torch.Tensor, target: torch.Tensor):
-    assert not target.requires_grad
+    # assert not target.requires_grad
     return F.mse_loss(source, target).mean()
 
 
 def style_loss(source: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    assert not target.requires_grad
+    # assert not target.requires_grad
     assert target.shape[:2] == source.shape[:2]
     b, c, _, _ = target.shape
     target_view = target.view((b, c, -1))
@@ -22,4 +22,8 @@ def style_loss_dict(source: dict, target: dict):
     union_keys = set(source.keys()).intersection(set(target.keys()))
     loss = [style_loss(source[key], target[key]).mean() for key in union_keys]
     # print(loss)
-    return torch.cat(loss).mean() if len(loss) > 1 else loss[0]
+    l_val = loss[0]
+    if len(loss) > 1:
+        for l in loss[1:]:
+            l_val += l
+    return l_val

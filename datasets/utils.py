@@ -6,6 +6,7 @@
 @Date   :   2019/11/12
 @Desc   :   None
 """
+import torch
 import torchvision.transforms as transforms
 from PIL import Image
 
@@ -33,9 +34,18 @@ def get_transform(opt):
         transform_list.append(transforms.RandomCrop(opt.fine_size))
 
     transform_list += [transforms.ToTensor(),
-                       transforms.Normalize((0.5, 0.5, 0.5),
-                                            (0.5, 0.5, 0.5))]
+                       transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
+
     return transforms.Compose(transform_list)
+
+
+def denorm(tensor, device, to_board=False):
+    std = torch.Tensor([0.229, 0.224, 0.225]).reshape(-1, 1, 1).to(device)
+    mean = torch.Tensor([0.485, 0.456, 0.406]).reshape(-1, 1, 1).to(device)
+    res = torch.clamp((tensor.to(device) * std + mean), 0, 1)
+    if to_board:
+        res = (res - 0.5) / 0.5
+    return res
 
 
 def __scale_width(img, target_width):
@@ -54,6 +64,7 @@ def __scale_height(img, target_height):
     w = int(target_height * ow / oh)
     h = target_height
     return img.resize((w, h), Image.BICUBIC)
+
 
 def __scale(img, target_side):
     ow, oh = img.size
